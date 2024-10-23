@@ -1,6 +1,7 @@
 package net.runelite.client.plugins.microbot.fishing.barbarian;
 
 import net.runelite.client.plugins.microbot.Microbot;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -45,10 +46,7 @@ public class BarbarianFishingOverlay extends OverlayPanel {
                     .build());
 
             panelComponent.getChildren().add(LineComponent.builder().build());
-            panelComponent.getChildren().add(LineComponent.builder()
-                    .left("Action cooldown:")
-                    .right(String.valueOf(BarbarianFishingScript.timeout))
-                    .build());
+            Rs2Antiban.renderAntibanOverlayComponents(panelComponent);
 
             panelComponent.getChildren().add(LineComponent.builder()
                     .left(Microbot.status)

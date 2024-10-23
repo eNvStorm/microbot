@@ -14,9 +14,15 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class PrayerScript extends Script {
     public boolean run(PlayerAssistConfig config) {
-        Rs2NpcManager.loadJson();
+        try {
+            Rs2NpcManager.loadJson();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
+                if (!Microbot.isLoggedIn()) return;
+
                 handlePrayer(config);
             } catch (Exception ex) {
                 System.err.println("Error: " + ex.getMessage());
@@ -32,7 +38,8 @@ public class PrayerScript extends Script {
         if (config.prayerStyle() == PrayerStyle.CONTINUOUS) {
             Rs2Prayer.toggleQuickPrayer(Rs2Combat.inCombat());
         } else {
-            Rs2Prayer.toggleQuickPrayer(config.prayerStyle() == PrayerStyle.ALWAYS_ON);
+            if (super.run())
+                Rs2Prayer.toggleQuickPrayer(config.prayerStyle() == PrayerStyle.ALWAYS_ON);
         }
     }
 

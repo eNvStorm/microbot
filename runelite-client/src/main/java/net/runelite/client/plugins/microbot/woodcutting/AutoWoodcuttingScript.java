@@ -2,22 +2,26 @@ package net.runelite.client.plugins.microbot.woodcutting;
 
 import net.runelite.api.AnimationID;
 import net.runelite.api.GameObject;
+import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.combat.Rs2Combat;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.math.Random;
+import net.runelite.client.plugins.microbot.util.math.Rs2Random;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.tile.Rs2Tile;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
+import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
 import net.runelite.client.plugins.microbot.woodcutting.enums.WoodcuttingWalkBack;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -28,37 +32,65 @@ enum State {
 
 public class AutoWoodcuttingScript extends Script {
 
-    public static String version = "1.6.0";
+    public static String version = "1.6.2";
     public boolean cannotLightFire = false;
 
     State state = State.WOODCUTTING;
-    private WorldPoint returnPoint;
+    private static WorldPoint returnPoint;
+
+    public static WorldPoint initPlayerLoc(AutoWoodcuttingConfig config) {
+        if (config.walkBack() == WoodcuttingWalkBack.INITIAL_LOCATION) {
+            return getInitialPlayerLocation();
+        } else {
+            return returnPoint;
+        }
+    }
 
     public boolean run(AutoWoodcuttingConfig config) {
         if (config.hopWhenPlayerDetected()) {
             Microbot.showMessage("Make sure autologin plugin is enabled and randomWorld checkbox is checked!");
         }
+        Rs2Antiban.resetAntibanSettings();
+        Rs2Antiban.antibanSetupTemplates.applyWoodcuttingSetup();
+        Rs2AntibanSettings.dynamicActivity = true;
+        Rs2AntibanSettings.dynamicIntensity = true;
         initialPlayerLocation = null;
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
 
                 if (!Microbot.isLoggedIn()) return;
                 if (!super.run()) return;
+                if(Rs2AntibanSettings.actionCooldownActive) return;
 
                 if (initialPlayerLocation == null) {
                     initialPlayerLocation = Rs2Player.getWorldLocation();
                 }
 
-                if (Rs2Player.isMoving() || Rs2Player.isAnimating() || Microbot.pauseAllScripts) return;
+                if (returnPoint == null) {
+                    returnPoint = Rs2Player.getWorldLocation();
+                }
+
+                if (!config.TREE().hasRequiredLevel()) {
+                    Microbot.showMessage("You do not have the required woodcutting level to cut this tree.");
+                    shutdown();
+                    return;
+                }
+
+                if (Rs2Player.isMoving() || Rs2Player.isAnimating() || Microbot.pauseAllScripts)
+                    return;
+
+                if (Rs2AntibanSettings.actionCooldownActive)
+                    return;
 
                 switch (state) {
                     case WOODCUTTING:
+
                         if (config.hopWhenPlayerDetected()) {
-                            Rs2Player.logoutIfPlayerDetected(1, 10);
-                            return;
+                            if (Rs2Player.logoutIfPlayerDetected(1, 10000))
+                                return;
                         }
 
-                        if (Rs2Equipment.isWearing("Dragon axe"))
+                        if (Rs2Equipment.isWearing("Dragon axe") || Rs2Equipment.isWearing("Dragon felling axe"))
                             Rs2Combat.setSpecState(true, 1000);
 
                         if (Rs2Inventory.isFull()) {
@@ -66,12 +98,16 @@ public class AutoWoodcuttingScript extends Script {
                             return;
                         }
 
-                        GameObject tree = Rs2GameObject.findObject(config.TREE().getName(), true, config.distanceToStray(), true, getInitialPlayerLocation());
+                        GameObject tree = Rs2GameObject.findObject(config.TREE().getName(), true, config.distanceToStray(), false, getInitialPlayerLocation());
 
                         if (tree != null) {
-                            Rs2GameObject.interact(tree, config.TREE().getAction());
-                            if (config.walkBack().equals(WoodcuttingWalkBack.LAST_LOCATION)) {
-                                returnPoint = Microbot.getClient().getLocalPlayer().getWorldLocation();
+                            if (Rs2GameObject.interact(tree, config.TREE().getAction())) {
+                                Rs2Player.waitForAnimation();
+                                Rs2Antiban.actionCooldown();
+
+                                if (config.walkBack().equals(WoodcuttingWalkBack.LAST_LOCATION)) {
+                                    returnPoint = Rs2Player.getWorldLocation();
+                                }
                             }
                         }
                         break;
@@ -80,7 +116,7 @@ public class AutoWoodcuttingScript extends Script {
                         break;
                 }
             } catch (Exception ex) {
-                System.out.println(ex.getMessage());
+                Microbot.log(ex.getMessage());
             }
         }, 0, 1000, TimeUnit.MILLISECONDS);
         return true;
@@ -101,18 +137,23 @@ public class AutoWoodcuttingScript extends Script {
                 state = State.WOODCUTTING;
                 break;
             case FIREMAKE:
-                do {
-                    burnLog(config);
-                }
-                while (Rs2Inventory.contains(config.TREE().getLog()));
+                burnLog(config);
+                
+                if (Rs2Inventory.contains(config.TREE().getLog())) return;
 
+                walkBack(config);
+                state = State.WOODCUTTING;
+                break;
+            case FLETCH_ARROWSHAFT:
+                fletchArrowShaft(config);
+                
                 walkBack(config);
                 state = State.WOODCUTTING;
                 break;
         }
     }
 
-    private boolean burnLog(AutoWoodcuttingConfig config) {
+    private void burnLog(AutoWoodcuttingConfig config) {
         WorldPoint fireSpot;
         if (Rs2Player.isStandingOnGameObject() || cannotLightFire) {
             fireSpot = fireSpot(1);
@@ -120,31 +161,59 @@ public class AutoWoodcuttingScript extends Script {
             cannotLightFire = false;
         }
         if (!isFiremake()) {
-            Rs2Inventory.use("tinderbox");
-            sleep(Random.random(300, 600));
-            Rs2Inventory.use(config.TREE().getLog());
-            sleepUntil(Rs2Inventory::waitForInventoryChanges);
+            Rs2Inventory.waitForInventoryChanges(() -> {
+                Rs2Inventory.use("tinderbox");
+                sleep(Random.random(300, 600));
+                Rs2Inventory.use(config.TREE().getLog());
+            });
         }
-        sleepUntil(() -> !isFiremake() && !Rs2Player.isStandingOnGameObject() && !Rs2Player.isStandingOnGroundItem(), 2500);
-        return true;
+        sleepUntil(() -> (!isFiremake() && Rs2Player.waitForXpDrop(Skill.FIREMAKING)) || cannotLightFire, 5000);
     }
 
     private WorldPoint fireSpot(int distance) {
         List<WorldPoint> worldPoints = Rs2Tile.getWalkableTilesAroundPlayer(distance);
+        WorldPoint playerLocation = Rs2Player.getWorldLocation();
+
+        // Create a map to group tiles by their distance from the player
+        Map<Integer, List<WorldPoint>> distanceMap = new HashMap<>();
 
         for (WorldPoint walkablePoint : worldPoints) {
             if (Rs2GameObject.getGameObject(walkablePoint) == null) {
-                return walkablePoint;
+                int tileDistance = playerLocation.distanceTo(walkablePoint);
+                distanceMap.computeIfAbsent(tileDistance, k -> new ArrayList<>()).add(walkablePoint);
             }
         }
 
-        fireSpot(distance + 1);
+        // Find the minimum distance that has walkable points
+        Optional<Integer> minDistanceOpt = distanceMap.keySet().stream().min(Integer::compare);
 
-        return null;
+        if (minDistanceOpt.isPresent()) {
+            List<WorldPoint> closestPoints = distanceMap.get(minDistanceOpt.get());
+
+            // Return a random point from the closest points
+            if (!closestPoints.isEmpty()) {
+                int randomIndex = Random.random(0, closestPoints.size());
+                return closestPoints.get(randomIndex);
+            }
+        }
+
+        // Recursively increase the distance if no valid point is found
+        return fireSpot(distance + 1);
     }
 
     private boolean isFiremake() {
-        return Rs2Player.getAnimation() == AnimationID.FIREMAKING;
+        return Rs2Player.isAnimating(1800) && Rs2Player.getLastAnimationID() == AnimationID.FIREMAKING;
+    }
+    
+    private void fletchArrowShaft(AutoWoodcuttingConfig config) {
+        Rs2Inventory.combineClosest("knife", config.TREE().getLog());
+        Rs2Random.waitEx(1200, 300);
+        Rs2Widget.clickWidget("arrow shafts");
+        sleepUntil(() -> !isFlectching(), 5000);
+    }
+    
+    private boolean isFlectching() {
+        return Rs2Player.isAnimating(3000) && Rs2Player.getLastAnimationID() == AnimationID.FLETCHING_BOW_CUTTING;
     }
 
     private WorldPoint calculateReturnPoint(AutoWoodcuttingConfig config) {
@@ -158,5 +227,13 @@ public class AutoWoodcuttingScript extends Script {
     private void walkBack(AutoWoodcuttingConfig config) {
         Rs2Walker.walkTo(new WorldPoint(calculateReturnPoint(config).getX() - Random.random(-1, 1), calculateReturnPoint(config).getY() - Random.random(-1, 1), calculateReturnPoint(config).getPlane()));
         sleepUntil(() -> Rs2Player.getWorldLocation().distanceTo(calculateReturnPoint(config)) <= 4);
+    }
+
+    @Override
+    public void shutdown() {
+        super.shutdown();
+        returnPoint = null;
+        initialPlayerLocation = null;
+        Rs2Antiban.resetAntibanSettings();
     }
 }

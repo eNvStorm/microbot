@@ -95,6 +95,7 @@ public class DetailedQuestStep extends QuestStep
 	@Setter
 	protected List<WorldPoint> worldLinePoints;
 
+	@Getter
 	private final List<QuestTile> markedTiles = new ArrayList<>();
 
 	@Getter
@@ -118,6 +119,7 @@ public class DetailedQuestStep extends QuestStep
 
 	protected boolean started;
 
+	@Getter
 	@Setter
 	protected boolean hideWorldArrow;
 

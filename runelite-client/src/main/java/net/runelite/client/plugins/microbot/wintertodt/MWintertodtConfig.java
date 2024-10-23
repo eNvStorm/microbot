@@ -62,25 +62,14 @@ public interface MWintertodtConfig extends Config {
         return true;
     }
 
-//    @ConfigItem(
-//            keyName = "FixBrazier",
-//            name = "Fix Brazier",
-//            description = "The Wintertodt will occasionally break the braziers; they must be repaired again before use. This rewards 4x the player's Construction level in experience, provided they own a player-owned house.",
-//            position = 3,
-//            section = generalSection
-//    )
-//    default boolean fixBrazier() {
-//        return true;
-//    }
-
     @ConfigItem(
-            keyName = "OpenCrates",
-            name = "Open Supply Crates",
-            description = "Open supply crates",
-            position = 4,
+            keyName = "FixBrazier",
+            name = "Fix Brazier",
+            description = "The Wintertodt will occasionally break the braziers; they must be repaired again before use. This rewards 4x the player's Construction level in experience, provided they own a player-owned house.",
+            position = 3,
             section = generalSection
     )
-    default boolean openCrates() {
+    default boolean fixBrazier() {
         return true;
     }
 
@@ -118,25 +107,36 @@ public interface MWintertodtConfig extends Config {
     }
 
     @ConfigItem(
-            keyName = "Eat at %",
-            name = "Eat at %",
-            description = "Eat at specific percentage health.",
+            keyName = "MinFood",
+            name = "Min Food",
+            description = "Minimum food to start a new game",
             position = 3,
             section = foodSection
     )
-    default int eatAt() {
-        return 70;
+    default int minFood() {
+        return 2;
     }
 
     @ConfigItem(
-            keyName = "Hitpoints Tresshold",
-            name = "HP % to run away",
-            description = "Runs to the bank if a specific health treshhold is reached and the player does not have any food in their inventory.",
+            keyName = "Eat at warmth level",
+            name = "Eat at warmth level",
+            description = "Eat at specific warmth level",
             position = 4,
             section = foodSection
     )
-    default int hpTreshhold() {
-        return 30;
+    default int eatAtWarmthLevel() {
+        return 25;
+    }
+
+    @ConfigItem(
+            keyName = "Warmth Tresshold",
+            name = "Warmth level to run away",
+            description = "Runs to the bank if a specific warmth treshhold is reached and the player does not have any food in their inventory.",
+            position = 5,
+            section = foodSection
+    )
+    default int warmthTreshhold() {
+        return 20;
     }
 
     @ConfigItem(

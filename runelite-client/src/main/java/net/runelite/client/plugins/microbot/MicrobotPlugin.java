@@ -10,6 +10,7 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.ProfileManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.game.SpriteManager;
@@ -18,10 +19,12 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginInstantiationException;
 import net.runelite.client.plugins.PluginManager;
+import net.runelite.client.plugins.microbot.qualityoflife.scripts.pouch.PouchScript;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.mouse.VirtualMouse;
+import net.runelite.client.plugins.microbot.util.mouse.naturalmouse.NaturalMouse;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.reflection.Rs2Reflection;
 import net.runelite.client.plugins.microbot.util.shop.Rs2Shop;
@@ -47,12 +50,6 @@ import java.lang.reflect.InvocationTargetException;
 @Slf4j
 public class MicrobotPlugin extends Plugin {
     @Inject
-    private Client client;
-    @Inject
-    private ClientThread clientThread;
-    @Inject
-    private ClientToolbar clientToolbar;
-    @Inject
     Notifier notifier;
     @Inject
     WorldService worldService;
@@ -68,7 +65,12 @@ public class MicrobotPlugin extends Plugin {
     ChatMessageManager chatMessageManager;
     @Inject
     PluginManager pluginManager;
-
+    @Inject
+    private Client client;
+    @Inject
+    private ClientThread clientThread;
+    @Inject
+    private ClientToolbar clientToolbar;
     @Inject
     private MicrobotOverlay microbotOverlay;
     @Inject
@@ -81,6 +83,11 @@ public class MicrobotPlugin extends Plugin {
     private InfoBoxManager infoBoxManager;
     @Inject
     private WorldMapPointManager worldMapPointManager;
+    @Inject
+    private NaturalMouse naturalMouse;
+    @Inject
+    private PouchScript pouchScript;
+
     @Override
     protected void startUp() throws AWTException {
         Microbot.pauseAllScripts = false;
@@ -92,6 +99,7 @@ public class MicrobotPlugin extends Plugin {
         Microbot.setItemManager(itemManager);
         Microbot.setNpcManager(npcManager);
         Microbot.setMouse(new VirtualMouse());
+        Microbot.setNaturalMouse(naturalMouse);
         Microbot.setSpriteManager(spriteManager);
         Microbot.setPluginManager(pluginManager);
         Microbot.setWorldMapOverlay(worldMapOverlay);
@@ -102,9 +110,10 @@ public class MicrobotPlugin extends Plugin {
             overlayManager.add(microbotOverlay);
         }
 
-        new InputSelector(clientToolbar);
+        Microbot.setPouchScript(pouchScript);
+        pouchScript.startUp();
 
-        //TODO: Rs2NpcManager.loadJson();
+        new InputSelector(clientToolbar);
     }
 
     protected void shutDown() {
@@ -119,7 +128,7 @@ public class MicrobotPlugin extends Plugin {
 
     @Subscribe
     public void onItemContainerChanged(ItemContainerChanged event) {
-
+        pouchScript.onItemContainerChanged(event);
         if (event.getContainerId() == InventoryID.BANK.getId()) {
             Rs2Bank.storeBankItemsInMemory(event);
         } else if (event.getContainerId() == InventoryID.INVENTORY.getId()) {
@@ -147,7 +156,12 @@ public class MicrobotPlugin extends Plugin {
     public void onVarbitChanged(VarbitChanged event) {
         Rs2Player.handlePotionTimers(event);
     }
-
+    
+    @Subscribe
+    public void onAnimationChanged(AnimationChanged event) {
+        Rs2Player.handleAnimationChanged(event);
+    }
+    
     @Subscribe(priority = 999)
     private void onMenuEntryAdded(MenuEntryAdded event) {
         if (Microbot.targetMenu != null && event.getType() != Microbot.targetMenu.getType().getId()) {
@@ -163,7 +177,7 @@ public class MicrobotPlugin extends Plugin {
                             .setType(Microbot.targetMenu.getType())
                             .setParam0(Microbot.targetMenu.getParam0())
                             .setParam1(Microbot.targetMenu.getParam1())
-                            .setForceLeftClick(true);
+                            .setForceLeftClick(false);
 
             if (Microbot.targetMenu.getItemId() > 0) {
                 try {
@@ -178,8 +192,17 @@ public class MicrobotPlugin extends Plugin {
 
     @Subscribe
     private void onMenuOptionClicked(MenuOptionClicked event) {
+        Microbot.getPouchScript().onMenuOptionClicked(event);
         Microbot.targetMenu = null;
         System.out.println(event.getMenuEntry());
+    }
+
+    @Subscribe
+    private void onChatMessage(ChatMessage event) {
+        if (event.getType() == ChatMessageType.ENGINE && event.getMessage().equalsIgnoreCase("I can't reach that!")) {
+            Microbot.cantReachTarget = true;
+        }
+        Microbot.getPouchScript().onChatMessage(event);
     }
 
     @SneakyThrows
@@ -204,6 +227,17 @@ public class MicrobotPlugin extends Plugin {
             Rs2Tile.init();
             int ticks = 8;
             Rs2Tile.addDangerousGraphicsObjectTile(graphicsObject, 600 * ticks);
+        }
+    }
+
+    @Subscribe
+    public void onConfigChanged(ConfigChanged ev) {
+        if (ev.getKey().equals("displayPouchCounter")) {
+            if (ev.getNewValue() == "true") {
+                Microbot.getPouchScript().startUp();
+            } else {
+                Microbot.getPouchScript().shutdown();
+            }
         }
     }
 }

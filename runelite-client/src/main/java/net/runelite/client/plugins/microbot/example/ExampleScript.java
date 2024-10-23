@@ -7,8 +7,8 @@ import java.util.concurrent.TimeUnit;
 
 
 public class ExampleScript extends Script {
-    public static double version = 1.0;
 
+    public static boolean test = false;
     public boolean run(ExampleConfig config) {
         Microbot.enableAutoRunOn = false;
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
@@ -17,7 +17,8 @@ public class ExampleScript extends Script {
                 if (!super.run()) return;
                 long startTime = System.currentTimeMillis();
 
-                //CODE HERE
+                test = false;
+
 
                 long endTime = System.currentTimeMillis();
                 long totalTime = endTime - startTime;

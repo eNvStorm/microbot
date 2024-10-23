@@ -182,8 +182,9 @@ public class ProfileManager {
             modified |= profiles.removeIf(p -> p.getId() == id);
         }
 
-        public void renameProfile(ConfigProfile profile, String name) {
+        public void renameProfile(ConfigProfile profile, String nick, String name) {
             File oldFile = profileConfigFile(profile);
+            profile.setNick(nick);
             profile.setName(name);
             modified = true;
             File newFile = profileConfigFile(profile);

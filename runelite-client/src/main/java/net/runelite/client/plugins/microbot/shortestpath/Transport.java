@@ -11,6 +11,7 @@ import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Item;
 import net.runelite.client.plugins.microbot.util.keyboard.Rs2Keyboard;
 import net.runelite.client.plugins.microbot.util.npc.Rs2Npc;
+import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static net.runelite.client.plugins.microbot.util.Global.sleep;
+import static net.runelite.client.plugins.microbot.util.Global.sleepUntil;
 
 /**
  * This class represents a travel point between two WorldPoints.
@@ -119,6 +121,10 @@ public class Transport {
     /**
      * The additional travel time
      */
+    /** Whether the transport is a player-held item */
+    @Getter
+    private boolean isNpc;
+
     @Getter
     private int wait;
 
@@ -240,6 +246,7 @@ public class Transport {
         isSpiritTree = TransportType.SPIRIT_TREE.equals(transportType);
         isTeleportationLever = TransportType.TELEPORTATION_LEVER.equals(transportType);
         isTeleportationPortal = TransportType.TELEPORTATION_PORTAL.equals(transportType);
+        isNpc = TransportType.NPC.equals(transportType);
         isMember = TransportType.TELEPORTATION_LEVER.equals(transportType)
                 ||  TransportType.SPIRIT_TREE.equals(transportType)
                 || TransportType.GNOME_GLIDER.equals(transportType)
@@ -338,6 +345,7 @@ public class Transport {
         addTransports(transports, "spirit_trees.tsv", TransportType.SPIRIT_TREE);
         addTransports(transports, "levers.tsv", TransportType.TELEPORTATION_LEVER);
         addTransports(transports, "portals.tsv", TransportType.TELEPORTATION_PORTAL);
+        addTransports(transports, "npcs.tsv", TransportType.NPC);
 
         return transports;
     }
@@ -354,7 +362,8 @@ public class Transport {
         GNOME_GLIDER,
         SPIRIT_TREE,
         TELEPORTATION_LEVER,
-        TELEPORTATION_PORTAL
+        TELEPORTATION_PORTAL,
+        NPC,
     }
 
     private static boolean completedQuests(Transport transport) {
@@ -445,22 +454,20 @@ public class Transport {
         System.out.println("Destination: " + destination);
 
         // Check if the widget is already visible
-        if (!Rs2Widget.isHidden(gliderMenu)) {
-            System.out.println("Widget is already visible. Skipping interaction.");
-            return true;
+        if (Rs2Widget.isHidden(gliderMenu)) {
+            // Find the glider NPC
+            NPC gnome = Rs2Npc.getNpc(npcName);  // Use the NPC name to find the NPC
+            if (gnome == null) {
+                System.out.println("Gnome not found.");
+                return false;
+            }
+
+            // Interact with the gnome glider NPC
+            Rs2Npc.interact(gnome, action);
+            sleepUntil(() -> !Rs2Widget.isHidden(gliderMenu));
         }
 
-        // Find the glider NPC
-        NPC gnome = Rs2Npc.getNpc(npcName);  // Use the NPC name to find the NPC
-        if (gnome == null) {
-            System.out.println("Gnome not found.");
-            return false;
-        }
 
-        // Interact with the gnome glider NPC
-        Rs2Npc.interact(gnome, action);
-
-        sleep(1200,2400);
 
         // Wait for the widget to become visible
         boolean widgetVisible = !Rs2Widget.isHidden(gliderMenu);
@@ -489,7 +496,6 @@ public class Transport {
     }
 
     // Constants for widget IDs
-    private static final int FAIRY_RING_ID = 29495;
     private static final int FAIRY_RING_MENU = 26083328;
 
     private static final int SLOT_ONE = 26083331;
@@ -538,7 +544,7 @@ public class Transport {
             rotateSlotToDesiredRotation(SLOT_TWO, Rs2Widget.getWidget(SLOT_TWO).getRotationY(), getDesiredRotation(getDisplayInfo().charAt(1)), SLOT_TWO_ACW_ROTATION, SLOT_TWO_CW_ROTATION);
             rotateSlotToDesiredRotation(SLOT_THREE, Rs2Widget.getWidget(SLOT_THREE).getRotationY(), getDesiredRotation(getDisplayInfo().charAt(2)), SLOT_THREE_ACW_ROTATION, SLOT_THREE_CW_ROTATION);
             Rs2Widget.clickWidget(TELEPORT_BUTTON);
-            sleep(1200,1800);
+            Rs2Player.waitForAnimation();
             if (!Rs2Equipment.isWearing(startingWeaponId)) {
                 sleep(3000,3600); // Required due to long animation time
                 System.out.println("Equipping Starting Weapon: " + startingWeaponId);
@@ -549,7 +555,9 @@ public class Transport {
 
         if (Rs2Equipment.isWearing("Dramen staff") || Rs2Equipment.isWearing("Lunar staff")) {
             System.out.println("Interacting with the fairy ring directly.");
-            Rs2GameObject.interact(FAIRY_RING_ID, "Configure");
+            var fairyRing = Rs2GameObject.findObjectByLocation(origin);
+            Rs2GameObject.interact(fairyRing, "Configure");
+            Rs2Player.waitForWalking();
         } else if (Rs2Inventory.contains("Dramen staff")) {
             Rs2Inventory.equip("Dramen staff");
             sleep(600);

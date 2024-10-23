@@ -4441,3 +4441,44 @@
 # Kovac
 3366 11483 0	3361 3148 0	Exit Exit 44636
 3361 3148 0	3366 11483 0	Enter Cave 44635
+
+# Hazeel cult
+2567 9680 0	2606 9692 0	Board Raft 2849
+2606 9692 0	2567 9680 0	Board Raft 2849
+
+# Murder mystery
+2736 3580 1	2736 3580 0	Climb-down Staircase 25683
+2736 3580 0	2736 3580 1	Climb-up Staircase 25682
+							
+# Lumbridge basement / cavern
+3219 9618 0	3221 9618 0	Squeeze-through Hole 6898			The Lost Tribe
+3221 9618 0	3219 9618 0	Squeeze-through Hole 6899			The Lost Tribe
+3224 9604 0	3224 9600 0	Squeeze-through Hole 6912
+3224 9600 0	3224 9604 0	Squeeze-through Hole 6912
+3226 9542 0	3219 9532 2	Enter Tunnel 6659
+3219 9532 2	3226 9542 0	Enter Tunnel 6658
+3317 9603 0	2748 5374 0	Open Door 6919
+2748 5374 0	3317 9603 0	Open Bone door 22945
+
+# Mountain camp
+2761 3657 0	2761 3660 0	Climb-over Rockslide 5847
+2761 3660 0	2761 3657 0	Climb-over Rockslide 5847
+
+# Varrock pub
+3285 3496 0	3285 3492 1	Climb-up Staircase 11797
+3285 3492 1	3285 3496 0	Climb-down Staircase 11799
+
+# Dungeon Zogre flesh eaters
+2477 9437 2	2485 3045 0	Climb-up Stairs 6842
+2457 3048 0	2455 3048 0	Climb-over Crushed barricade 6878
+2442 9417 0	2446 9417 2	Climb-over Stairs 6842
+
+# Shayzien Encampent
+1482 3633 0	1482 3633 1	Climb-up Ladder 42207
+1482 3633 1	1482 3633 0	Climb-down Ladder 42208
+
+
+# dungeon shayzien mountain camp
+1169 9973 0	1171 9946 0	Magic gate Pass 31967
+9363 1050 0	1214 3557 0	Climb Rope 32507
+

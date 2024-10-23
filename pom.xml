@@ -137,6 +137,9 @@
 		<module>runelite-client</module>
 		<module>runelite-jshell</module>
 		<module>runelite-maven-plugin</module>
+		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/useonobject</module>
+		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/blastifurnace</module>
+		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/PlayerAlarm</module>
 	</modules>
 
 	<dependencyManagement>

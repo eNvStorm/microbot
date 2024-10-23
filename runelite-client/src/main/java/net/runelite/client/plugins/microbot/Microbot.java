@@ -19,11 +19,15 @@ import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.plugins.loottracker.LootTrackerRecord;
 import net.runelite.client.plugins.microbot.configs.SpecialAttackConfigs;
 import net.runelite.client.plugins.microbot.dashboard.PluginRequestModel;
+import net.runelite.client.plugins.microbot.qualityoflife.scripts.pouch.PouchScript;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Item;
 import net.runelite.client.plugins.microbot.util.math.Random;
+import net.runelite.client.plugins.microbot.util.menu.NewMenuEntry;
+import net.runelite.client.plugins.microbot.util.misc.Rs2UiHelper;
 import net.runelite.client.plugins.microbot.util.mouse.Mouse;
-import net.runelite.client.plugins.timers.GameTimer;
-import net.runelite.client.plugins.timers.TimersPlugin;
+import net.runelite.client.plugins.microbot.util.mouse.naturalmouse.NaturalMouse;
+import net.runelite.client.plugins.timersandbuffs.GameTimer;
+import net.runelite.client.plugins.timersandbuffs.TimersAndBuffsPlugin;
 import net.runelite.client.ui.overlay.infobox.InfoBox;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
@@ -31,6 +35,8 @@ import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.WorldUtil;
 import net.runelite.http.api.worlds.World;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -46,7 +52,23 @@ import java.util.concurrent.TimeUnit;
 import static net.runelite.client.plugins.microbot.util.Global.sleep;
 
 public class Microbot {
+    private static final ScheduledExecutorService xpSchedulor = Executors.newSingleThreadScheduledExecutor();
+    @Getter
+    private static final SpecialAttackConfigs specialAttackConfigs = new SpecialAttackConfigs();
     public static MenuEntry targetMenu;
+    @Inject
+    @Named("microbot.storage")
+    public static String storageUrl;
+    public static boolean debug = false;
+    public static boolean isGainingExp = false;
+    public static boolean pauseAllScripts = false;
+    public static String status = "IDLE";
+    public static boolean enableAutoRunOn = true;
+    public static boolean useStaminaPotsIfNeeded = true;
+    public static int runEnergyThreshold = 4000;
+    @Getter
+    @Setter
+    public static NaturalMouse naturalMouse;
     @Getter
     @Setter
     private static Mouse mouse;
@@ -95,20 +117,18 @@ public class Microbot {
     @Getter
     @Setter
     private static ChatMessageManager chatMessageManager;
-
-    public static boolean debug = false;
-
-    public static boolean isGainingExp = false;
-    public static boolean pauseAllScripts = false;
-    public static String status = "IDLE";
-
-    public static boolean enableAutoRunOn = true;
-
-    private static final ScheduledExecutorService xpSchedulor = Executors.newSingleThreadScheduledExecutor();
     private static ScheduledFuture<?> xpSchedulorFuture;
     private static net.runelite.api.World quickHopTargetWorld;
+    /**
+     * Pouchscript is injected in the main MicrobotPlugin as it's being used in multiple scripts
+     */
     @Getter
-    private static final SpecialAttackConfigs specialAttackConfigs = new SpecialAttackConfigs();
+    @Setter
+    @Inject
+    private static PouchScript pouchScript;
+
+    public static boolean cantReachTarget = false;
+    public static int cantReachTargetRetries = 0;
 
     @Deprecated(since = "Use isMoving", forRemoval = true)
     public static boolean isWalking() {
@@ -161,7 +181,8 @@ public class Microbot {
         GameState idx = client.getGameState();
         return idx == GameState.LOGGED_IN;
     }
-
+    
+    @Deprecated(since = "1.4.0 - use Rs2Player variant", forRemoval = true)
     public static boolean hasLevel(int levelRequired, Skill skill) {
         return Microbot.getClient().getRealSkillLevel(skill) >= levelRequired;
     }
@@ -232,9 +253,14 @@ public class Microbot {
     }
 
     public static void startPlugin(Plugin plugin) {
+        if (plugin == null) return;
+        Microbot.getPluginManager().setPluginEnabled(plugin, true);
+        Microbot.getPluginManager().startPlugins();
+
 
     }
 
+    @Deprecated(since = "1.3.8 - use Rs2UiHelper", forRemoval = true)
     public static Point calculateClickingPoint(Rectangle rect) {
         if (rect.getX() == 1 && rect.getY() == 1) return new Point(1, 1);
         int x = (int) (rect.getX() + (double) Random.random((int) rect.getWidth() / 6 * -1, (int) rect.getWidth() / 6) + rect.getWidth() / 2.0);
@@ -242,40 +268,56 @@ public class Microbot {
         return new Point(x, y);
     }
 
-    public static void doInvoke(MenuEntry entry, Rectangle rectangle) {
-        targetMenu = entry;
-        int viewportHeight = client.getViewportHeight();
-        int viewportWidth = client.getViewportWidth();
-        if (!(rectangle.getX() > (double) viewportWidth) && !(rectangle.getY() > (double) viewportHeight) && !(rectangle.getX() < 0.0) && !(rectangle.getY() < 0.0)) {
-            click(rectangle);
-        } else {
-            click(new Rectangle(1, 1));
+    public static void doInvoke(NewMenuEntry entry, Rectangle rectangle) {
+
+        try {
+            if (Rs2UiHelper.isRectangleWithinViewport(rectangle)) {
+                click(rectangle, entry);
+            } else {
+                click(new Rectangle(1, 1), entry);
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            e.printStackTrace();
+            // Handle the error as needed
         }
     }
 
-    public static void click(Rectangle rectangle) {
-
-        Point point = calculateClickingPoint(rectangle);
-        if (client.isStretchedEnabled()) {
-            Dimension stretched = client.getStretchedDimensions();
-            Dimension real = client.getRealDimensions();
-            double width = (double) stretched.width / real.getWidth();
-            double height = (double) stretched.height / real.getHeight();
-            point = new Point((int) ((double) point.getX() * width), (int) ((double) point.getY() * height));
+    public static void drag(Rectangle start, Rectangle end) {
+        if (start == null || end == null) return;
+        if (!Rs2UiHelper.isRectangleWithinViewport(start) || !Rs2UiHelper.isRectangleWithinViewport(end)) return;
+        Point startPoint = Rs2UiHelper.getClickingPoint(start, true);
+        Point endPoint = Rs2UiHelper.getClickingPoint(end, true);
+        mouse.drag(startPoint, endPoint);
+        if (!Microbot.getClient().isClientThread()) {
+            sleep(50, 80);
         }
+    }
 
-        mouseEvent(504, point);
-        mouseEvent(505, point);
-        mouseEvent(503, point);
-        mouseEvent(501, point);
-        mouseEvent(502, point);
-        mouseEvent(500, point);
+    public static void click(Rectangle rectangle, NewMenuEntry entry) {
+        if (entry.getType() == MenuAction.WALK) {
+            mouse.click(new Point(entry.getParam0(), entry.getParam1()), entry);
+        } else {
+            Point point = Rs2UiHelper.getClickingPoint(rectangle, true);
+            mouse.click(point, entry);
+        }
 
         if (!Microbot.getClient().isClientThread()) {
             sleep(50, 100);
         }
     }
 
+    public static void click(Rectangle rectangle) {
+
+        Point point = Rs2UiHelper.getClickingPoint(rectangle, true);
+        mouse.click(point);
+
+
+        if (!Microbot.getClient().isClientThread()) {
+            sleep(50, 80);
+        }
+    }
+
+    @Deprecated(since = "1.3.8 - use Mouse class", forRemoval = true)
     private static void mouseEvent(int id, Point point) {
         MouseEvent e = new MouseEvent(client.getCanvas(), id, System.currentTimeMillis(), 0, point.getX(), point.getY(), 1, false, 1);
         client.getCanvas().dispatchEvent(e);
@@ -294,7 +336,7 @@ public class Microbot {
     }
 
     public static boolean isTimerActive(GameTimer gameTimer) {
-        if (!isPluginEnabled(TimersPlugin.class.getName())) {
+        if (!isPluginEnabled(TimersAndBuffsPlugin.class.getName())) {
             log("Please enable the timers plugin to make sure the script is working properly.");
             return true;
         }
@@ -307,6 +349,10 @@ public class Microbot {
     }
 
     public static void log(String message) {
+        if (!Microbot.isLoggedIn()) {
+            System.out.println(message);
+            return;
+        }
         LocalTime currentTime = LocalTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
         String formattedTime = currentTime.format(formatter);
@@ -314,7 +360,6 @@ public class Microbot {
                 Microbot.getClient().addChatMessage(ChatMessageType.ENGINE, "", "[" + formattedTime + "]: " + message, "", false)
         );
     }
-
     private static boolean isPluginEnabled(String name) {
         Plugin dashboard = Microbot.getPluginManager().getPlugins().stream()
                 .filter(x -> x.getClass().getName().equals(name))
@@ -324,6 +369,10 @@ public class Microbot {
         if (dashboard == null) return false;
 
         return Microbot.getPluginManager().isPluginEnabled(dashboard);
+    }
+    
+    public static boolean isPluginEnabled(Class c) {
+        return isPluginEnabled(c.getName());
     }
 }
 

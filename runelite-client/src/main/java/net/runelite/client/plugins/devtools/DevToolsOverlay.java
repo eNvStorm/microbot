@@ -25,38 +25,15 @@
  */
 package net.runelite.client.plugins.devtools;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.Polygon;
-import java.awt.Shape;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import net.runelite.api.Animation;
-import net.runelite.api.Client;
-import net.runelite.api.Constants;
-import net.runelite.api.DecorativeObject;
-import net.runelite.api.DynamicObject;
-import net.runelite.api.GameObject;
-import net.runelite.api.GraphicsObject;
-import net.runelite.api.ItemLayer;
-import net.runelite.api.NPC;
-import net.runelite.api.NPCComposition;
-import net.runelite.api.Node;
-import net.runelite.api.Perspective;
-import net.runelite.api.Player;
 import net.runelite.api.Point;
-import net.runelite.api.Projectile;
-import net.runelite.api.Scene;
-import net.runelite.api.Tile;
-import net.runelite.api.TileItem;
-import net.runelite.api.TileObject;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.widgets.Widget;
+import net.runelite.client.plugins.microbot.globval.enums.InterfaceTab;
+import net.runelite.client.plugins.microbot.util.tabs.Rs2Tab;
+import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -64,6 +41,13 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.awt.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 @Singleton
 class DevToolsOverlay extends Overlay
@@ -111,6 +95,11 @@ class DevToolsOverlay extends Overlay
 			renderNpcs(graphics);
 		}
 
+		if (plugin.getInventory().isActive())
+		{
+			renderInventory(graphics);
+		}
+
 		if (plugin.getGroundItems().isActive() || plugin.getGroundObjects().isActive() || plugin.getGameObjects().isActive() || plugin.getWalls().isActive() || plugin.getDecorations().isActive() || plugin.getTileLocation().isActive() || plugin.getMovementFlags().isActive())
 		{
 			renderTileObjects(graphics);
@@ -126,21 +115,20 @@ class DevToolsOverlay extends Overlay
 			renderGraphicsObjects(graphics);
 		}
 
-		if (plugin.getRoofs().isActive())
+		if (plugin.getTileFlags().isActive())
 		{
-			renderRoofs(graphics);
+			renderTileFlags(graphics);
 		}
 
 		return null;
 	}
 
-	private void renderRoofs(Graphics2D graphics)
+	private void renderTileFlags(Graphics2D graphics)
 	{
 		Scene scene = client.getScene();
 		Tile[][][] tiles = scene.getTiles();
 		byte[][][] settings = client.getTileSettings();
 		int z = client.getPlane();
-		String text = "R";
 
 		for (int x = 0; x < Constants.SCENE_SIZE; ++x)
 		{
@@ -153,19 +141,36 @@ class DevToolsOverlay extends Overlay
 					continue;
 				}
 
+				boolean isbridge = (settings[1][x][y] & Constants.TILE_FLAG_BRIDGE) != 0;
 				int flag = settings[z][x][y];
-				if ((flag & Constants.TILE_FLAG_UNDER_ROOF) == 0)
+				boolean isvisbelow = (flag & Constants.TILE_FLAG_VIS_BELOW) != 0;
+				boolean hasroof = (flag & Constants.TILE_FLAG_UNDER_ROOF) != 0;
+				if (!isbridge && !isvisbelow && !hasroof)
 				{
 					continue;
 				}
 
-				Point loc = Perspective.getCanvasTextLocation(client, graphics, tile.getLocalLocation(), text, z);
+				String s = "";
+				if (isbridge)
+				{
+					s += "B";
+				}
+				if (isvisbelow)
+				{
+					s += "V";
+				}
+				if (hasroof)
+				{
+					s += "R";
+				}
+
+				Point loc = Perspective.getCanvasTextLocation(client, graphics, tile.getLocalLocation(), s, z);
 				if (loc == null)
 				{
 					continue;
 				}
 
-				OverlayUtil.renderTextLocation(graphics, loc, text, Color.RED);
+				OverlayUtil.renderTextLocation(graphics, loc, s, Color.RED);
 			}
 		}
 	}
@@ -231,6 +236,16 @@ class DevToolsOverlay extends Overlay
 				}
 			}
 			OverlayUtil.renderActorOverlay(graphics, npc, text, color);
+		}
+	}
+
+	private void renderInventory(Graphics2D graphics)
+	{
+		if (Rs2Tab.getCurrentTab() != InterfaceTab.INVENTORY) return;
+		for (Widget inventoryWidget :Rs2Widget.getWidget(ComponentID.INVENTORY_CONTAINER).getChildren()) {
+			if (inventoryWidget == null || inventoryWidget.getItemId() == 6512) continue;
+			Point canvasLocation = inventoryWidget.getCanvasLocation();
+			OverlayUtil.renderTextLocation(graphics, new Point(canvasLocation.getX(), canvasLocation.getY() + inventoryWidget.getHeight()), String.valueOf(inventoryWidget.getItemId()), Color.GREEN, 12);
 		}
 	}
 

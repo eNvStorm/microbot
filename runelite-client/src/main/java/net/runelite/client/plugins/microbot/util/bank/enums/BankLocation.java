@@ -62,6 +62,7 @@ public enum BankLocation {
     LUMBRIDGE_BASEMENT(new WorldPoint(3218, 9623, 0)),
     LUMBRIDGE_TOP(new WorldPoint(3209, 3220, 2)),
     LUNAR_ISLE(new WorldPoint(2099, 3919, 0)),
+    MAGE_TRAINING_ARENA(new WorldPoint(3366, 3318, 1)),
     MINING_GUILD(new WorldPoint(3013, 9718, 0)),
     MOR_UL_REK(new WorldPoint(2541, 5140, 0)),
     MOTHERLOAD(new WorldPoint(3760, 5666, 0)),
@@ -105,7 +106,9 @@ public enum BankLocation {
             case CRAFTING_GUILD:
                 boolean hasFaladorHardDiary = Microbot.getVarbitValue(Varbits.DIARY_FALADOR_HARD) == 1;
                 boolean hasMaxedCrafting = Rs2Player.getSkillRequirement(Skill.CRAFTING, 99, false);
-                boolean isWearingCraftingGuild = (Rs2Equipment.isWearing("brown apron") || Rs2Equipment.isWearing("golden apron"));
+                boolean isWearingCraftingGuild = (Rs2Equipment.isWearing("brown apron") || Rs2Equipment.isWearing("golden apron")) ||
+                        (Rs2Equipment.isWearing("max cape") || Rs2Equipment.isWearing("max hood")) ||
+                        (Rs2Equipment.isWearing("crafting cape") || Rs2Equipment.isWearing("crafting hood"));
 
                 if (hasLineOfSight && Rs2Player.isMember() && (hasMaxedCrafting || hasFaladorHardDiary)) return true;
                 return Rs2Player.isMember() && isWearingCraftingGuild &&
@@ -146,8 +149,20 @@ public enum BankLocation {
             case LEGENDS_GUILD:
                 if (hasLineOfSight && Rs2Player.isMember()) return true;
                 return Rs2Player.isMember() && Rs2Player.getQuestState(Quest.LEGENDS_QUEST) == QuestState.FINISHED;
+            case MAGE_TRAINING_ARENA:
+                if (hasLineOfSight && Rs2Player.isMember()) return true;
+                return Rs2Player.isMember();
             default:
                 return true;
+        }
+    }
+    public boolean hasException() {
+        switch (this) {
+            case MINING_GUILD:
+                boolean inRegion = Microbot.getClient().getLocalPlayer().getWorldLocation().getRegionID() == 12183 || Microbot.getClient().getLocalPlayer().getWorldLocation().getRegionID() == 12184;
+                return inRegion;
+            default:
+                return false;
         }
     }
 }

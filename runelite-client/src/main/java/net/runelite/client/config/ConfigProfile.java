@@ -37,6 +37,9 @@ public class ConfigProfile
 	private final long id;
 	@Getter
 	@Setter(AccessLevel.PACKAGE)
+	private String nick;
+	@Getter
+	@Setter(AccessLevel.PACKAGE)
 	private String name;
 	@Getter
 	@Setter(AccessLevel.PACKAGE)
@@ -44,6 +47,9 @@ public class ConfigProfile
 	@Getter
 	@Setter(AccessLevel.PACKAGE)
 	private String bankPin;
+	@Getter
+	@Setter(AccessLevel.PACKAGE)
+	private boolean isMember;
 	@Getter
 	@Setter
 	private boolean sync;
