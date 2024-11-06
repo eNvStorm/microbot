@@ -5,7 +5,7 @@ package net.runelite.client.plugins.microbot.blastoisefurnace.enums;
 
 public enum State {
     BANKING,
-    COFFER,
+    PAY_FOREMAN,
     SMITHING,
     RETRIEVING;
 

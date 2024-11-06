@@ -8,12 +8,13 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.NPCManager;
+import net.runelite.client.plugins.inventorysetups.InventorySetup;
+import net.runelite.client.plugins.inventorysetups.MInventorySetupsPlugin;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.bankjs.development.BanksSlayer.Utils.*;
 import net.runelite.client.plugins.microbot.bankjs.development.BanksSlayer.enums.SlayerMasters;
 import net.runelite.client.plugins.microbot.bankjs.development.BanksSlayer.enums.State;
-import net.runelite.client.plugins.microbot.util.MicrobotInventorySetup;
 import net.runelite.client.plugins.microbot.util.Rs2InventorySetup;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.camera.Rs2Camera;
@@ -41,9 +42,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
-import static net.runelite.client.plugins.microbot.util.MicrobotInventorySetup.doesEquipmentMatch;
-import static net.runelite.client.plugins.microbot.util.MicrobotInventorySetup.doesInventoryMatch;
 
 public class BanksSlayerScript extends Script {
     public ScheduledFuture<?> mainScheduledFuture;
@@ -93,13 +91,17 @@ public class BanksSlayerScript extends Script {
     public static List<NPC> attackableNpcs = new ArrayList<>();
     public static Actor currentNpc = null;
 
-    public static String version = "0.2.4";
+    public static String version = "0.2.5";
 
     private volatile boolean isActive = false;
 
+    InventorySetup slayerInventorySetup;
+    Rs2InventorySetup slayerRs2InventorySetup;
+
     public boolean run(BanksSlayerConfig config) {
         this.config = config;
-
+        slayerInventorySetup = null;
+        slayerRs2InventorySetup = null;
         final SlayerMasters selectedSlayerMaster = config.slayerMaster();
         importantLootList = parseLootItems(config.importantLootItems());
         ignoreLootList = parseLootItems(config.ignoreLootItems());
@@ -164,14 +166,16 @@ public class BanksSlayerScript extends Script {
         if (!isActive) {
             return;
         }
-
-        log("Determining state... Has task: " + hasTask() + ", Does equipment match: " + doesEquipmentMatch(taskName) + ", Does inventory match: " + doesInventoryMatch(taskName) + ", Ignore restock: " + ignoreRestock);
-
+        if(hasTask()) {
+            log("Determining state... Has task: " + hasTask() + ", Does equipment match: " + slayerRs2InventorySetup.doesEquipmentMatch() + ", Does inventory match: " + slayerRs2InventorySetup.doesInventoryMatch() + ", Ignore restock: " + ignoreRestock);
+        } else {
+          log("No current task");
+        }
         if (!hasTask()) {
             setCurrentState(State.GET_TASK);
         } else {
             clientThread.invoke(this::storeCurrentTaskInMemory);  // Ensure task name is set
-            if (!doesEquipmentMatch(taskName) || Rs2Inventory.getInventoryFood().isEmpty()) {
+            if (!slayerRs2InventorySetup.doesEquipmentMatch() || Rs2Inventory.getInventoryFood().isEmpty()) {
                 if (!ignoreRestock) {
                     setCurrentState(State.RESTOCK);
                 } else {
@@ -231,7 +235,7 @@ public class BanksSlayerScript extends Script {
 
         clientThread.invoke(this::storeCurrentTaskInMemory);  // Ensure task name is set
 
-        if (!doesEquipmentMatch(taskName) || !doesInventoryMatch(taskName)) {
+        if (!slayerRs2InventorySetup.doesEquipmentMatch() || !slayerRs2InventorySetup.doesInventoryMatch()) {
             if (!ignoreRestock) {
                 log("Restocking as ignoreRestock is false.");
                 isSpecialTravelComplete = false;
@@ -240,8 +244,8 @@ public class BanksSlayerScript extends Script {
                 WorldPoint closestBank = CommonBankLocations.findClosestBank(currentLocation);
                 Rs2Walker.walkTo(closestBank);
 
-                boolean hasEquipment = doesEquipmentMatch(taskName);
-                boolean hasInventory = doesInventoryMatch(taskName);
+                boolean hasEquipment = slayerRs2InventorySetup.doesEquipmentMatch();
+                boolean hasInventory = slayerRs2InventorySetup.doesInventoryMatch();
 
                 if (!Rs2Bank.isOpen()) {
                     Rs2Bank.openBank();
@@ -254,14 +258,16 @@ public class BanksSlayerScript extends Script {
                     sleep(600);
 
                     log("Loading equipment for task: " + taskName);
-                    hasEquipment = MicrobotInventorySetup.loadEquipment(taskName, mainScheduledFuture);
+                    hasEquipment = slayerRs2InventorySetup.loadEquipment();
+                    //hasEquipment = MicrobotInventorySetup.loadEquipment(taskName, mainScheduledFuture);
                     log("Equipment match after loading: " + hasEquipment);
                 }
 
                 if (!hasInventory) {
                     sleep(600);
                     log("Loading inventory for task: " + taskName);
-                    hasInventory = MicrobotInventorySetup.loadInventory(taskName, mainScheduledFuture);
+                    hasInventory = slayerRs2InventorySetup.loadInventory();
+                    //hasInventory = MicrobotInventorySetup.loadInventory(taskName, mainScheduledFuture);
                     sleep(1000);
                     log("Inventory match after loading: " + hasInventory);
                 }
@@ -571,9 +577,12 @@ public class BanksSlayerScript extends Script {
                                 .getIntValue(client.getVarbitValue(Varbits.SLAYER_TASK_BOSS));
                         this.taskName = client.getStructComposition(structId)
                                 .getStringValue(ParamID.SLAYER_TASK_NAME);
+                            slayerInventorySetup = changeSetup(this.taskName, slayerInventorySetup);
                     } else {
                         this.taskName = client.getEnum(EnumID.SLAYER_TASK_CREATURE)
                                 .getStringValue(taskId);
+                            slayerInventorySetup = changeSetup(this.taskName, slayerInventorySetup);
+
                     }
                     this.areaId = client.getVarpValue(VarPlayer.SLAYER_TASK_LOCATION);
                     this.taskLocation = areaId > 0 ? client.getEnum(EnumID.SLAYER_TASK_LOCATION).getStringValue(areaId) : null;
@@ -592,6 +601,23 @@ public class BanksSlayerScript extends Script {
                 log("Error storing current task: " + ex.getMessage(), ex);
             }
         });
+    }
+
+    private InventorySetup changeSetup(String checkSetups, InventorySetup oldSetup) {
+        InventorySetup newSetup = MInventorySetupsPlugin.getInventorySetups()
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(x -> x.getName().equalsIgnoreCase(checkSetups))
+                .findFirst()
+                .orElse(null);
+        if(newSetup!=null) {
+            if (newSetup.getEquipment() != oldSetup.getEquipment()
+                    && newSetup.getInventory() != oldSetup.getInventory()) {
+                slayerRs2InventorySetup = new Rs2InventorySetup(checkSetups, mainScheduledFuture);
+                return newSetup;
+            }
+        }
+        return oldSetup;
     }
 
     public boolean isTuraelTaskLimitReached() {

@@ -20,7 +20,7 @@ import java.awt.*;
 
 
 @PluginDescriptor(
-        name = "<html>[<font color=#00ffff>§</font>] " + "BlastoiseFurnace",
+        name = "<html>[<font color=#ffffff>§</font>] " + "BlastoiseFurnace",
         description = "Storm's test plugin",
         tags = {"testing", "microbot", "smithing", "bar", "ore", "blast", "furnace"},
         enabledByDefault = false

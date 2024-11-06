@@ -226,6 +226,7 @@ public class ConfigClient
 			}
 		});
 	}
+
 	public void rename(long profile, String nick, String name)
 	{
 		HttpUrl url = apiBase.newBuilder()

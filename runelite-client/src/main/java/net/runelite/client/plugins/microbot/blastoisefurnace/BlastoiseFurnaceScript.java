@@ -2,12 +2,6 @@
 
 package net.runelite.client.plugins.microbot.blastoisefurnace;
 
-import java.util.concurrent.TimeUnit;
-
-import net.runelite.client.plugins.microbot.shortestpath.ShortestPathPlugin;
-import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
-import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
-
 import net.runelite.api.ItemID;
 import net.runelite.api.ObjectID;
 import net.runelite.api.Varbits;
@@ -16,7 +10,11 @@ import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.blastoisefurnace.enums.Bars;
 import net.runelite.client.plugins.microbot.blastoisefurnace.enums.State;
+import net.runelite.client.plugins.microbot.shortestpath.ShortestPathPlugin;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
+import net.runelite.client.plugins.microbot.util.npc.Rs2Npc;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
@@ -24,7 +22,16 @@ import net.runelite.client.plugins.microbot.util.keyboard.Rs2Keyboard;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
 import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
+import net.runelite.client.plugins.microbot.util.dialogues.Rs2Dialogue;
 
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import net.runelite.api.Skill;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import static net.runelite.api.ItemID.COAL;
 import static net.runelite.api.ItemID.GOLD_ORE;
 
@@ -40,7 +47,8 @@ public class BlastoiseFurnaceScript extends Script {
     static boolean coalBagEmpty;
     static boolean primaryOreEmpty;
     static boolean secondaryOreEmpty;
-
+    private long lastPaymentTime = 0;  // To track when the last payment was made
+    private static final long PAYMENT_INTERVAL = 590 * 1000; // 9 minutes 50 seconds in milliseconds
     static {
         state = State.BANKING;
     }
@@ -48,8 +56,7 @@ public class BlastoiseFurnaceScript extends Script {
     boolean initScript = false;
     private BlastoiseFurnaceConfig config;
 
-    public BlastoiseFurnaceScript() {
-    }
+
 
     private boolean hasRequiredOresForSmithing() {
         int primaryOre = this.config.getBars().getPrimaryOre();
@@ -84,10 +91,16 @@ public class BlastoiseFurnaceScript extends Script {
                     return;
                 }
 
-
+                if (System.currentTimeMillis() - lastPaymentTime >= PAYMENT_INTERVAL && Rs2Player.getRealSkillLevel(Skill.SMITHING) < 60) {
+                    state = State.PAY_FOREMAN;
+                }
 
                 boolean hasGauntlets;
                 switch (state) {
+                    case PAY_FOREMAN:
+                        Microbot.status = "Paying the Foreman";
+                        payForeman();
+                        break;
                     case BANKING:
                         Microbot.status = "Banking";
                         if (!Rs2Bank.isOpen()) {
@@ -134,7 +147,7 @@ public class BlastoiseFurnaceScript extends Script {
                         if (!Rs2Player.hasStaminaBuffActive() && Microbot.getClient().getEnergy() < 8100) {
                             this.useStaminaPotions();
                         }
-
+                        //TODO here is where it should be clicking on conveyor
                         this.retrieveItemsForCurrentFurnaceInteraction();
                         state = State.SMITHING;
                         break;
@@ -173,18 +186,17 @@ public class BlastoiseFurnaceScript extends Script {
                             }
                         }
 
-                        this.openBank();
-                        this.sleepUntil(Rs2Bank::isOpen, Rs2Player::isMoving, 300);
-                        state = State.BANKING;
                 }
             } catch (Exception ex) {
 
                 System.out.println(ex.getMessage());
             }
 
-        }, 00, 200, TimeUnit.MILLISECONDS);
+        }, 00, 80, TimeUnit.MILLISECONDS);
         return true;
     }
+
+
 
     private void retrieveCoalAndPrimary() {
         int primaryOre = this.config.getBars().getPrimaryOre();
@@ -193,7 +205,7 @@ public class BlastoiseFurnaceScript extends Script {
             return;
         }
 
-      boolean fullCoalBag = Rs2Inventory.interact(ItemID.COAL_BAG_12019, "Fill");
+        boolean fullCoalBag = Rs2Inventory.interact(ItemID.COAL_BAG_12019, "Fill");
         if (!fullCoalBag)
             return;
         depositOre();
@@ -242,7 +254,7 @@ public class BlastoiseFurnaceScript extends Script {
         sleep(100);
         sleepUntil(() -> Rs2Inventory.hasItem(GOLD_ORE));
         sleep(100);
-       depositOre();
+        depositOre();
 
         Rs2Walker.walkFastCanvas(new WorldPoint(1940, 4962, 0));
 
@@ -289,7 +301,7 @@ public class BlastoiseFurnaceScript extends Script {
             case 1:
             case 0:
                 retrieveGold();
-            break;
+                break;
             default:
                 assert false : "how did you get there";
 
@@ -364,7 +376,7 @@ public class BlastoiseFurnaceScript extends Script {
             case 5:
             case 4:
             case 3:retrieveCoalAndPrimary();
-            break;
+                break;
             case 2:
                 retrieveDoubleCoal();
                 break;
@@ -406,7 +418,7 @@ public class BlastoiseFurnaceScript extends Script {
             case 0:
                 retrieveDoubleCoal();
                 break;
-                default:
+            default:
                 assert false : "how did you get there";
         }
 
@@ -483,8 +495,43 @@ public class BlastoiseFurnaceScript extends Script {
 
             Rs2GameObject.interact(ObjectID.CONVEYOR_BELT, "Put-ore-on");
             sleepUntil(() -> !Rs2Inventory.isFull(), 2000); // Wait until the player stops moving
+            if (Rs2Player.getRealSkillLevel(Skill.SMITHING) > 98 ) {
+                Rs2Inventory.interact(ItemID.COAL_BAG_12019, "Empty");
+                sleepUntil(() -> Rs2Inventory.hasItem(COAL), 1000); // Wait for animation to finish
+
+                Rs2GameObject.interact(ObjectID.CONVEYOR_BELT, "Put-ore-on");
+                sleepUntil(() -> !Rs2Inventory.hasItem(COAL), 2000); }
         }
     }
+    private void payForeman() {
+
+        // Open the bank and deposit all items except the coal bag
+        if (!Rs2Bank.isOpen()) {
+            openBank();
+            sleepUntil(Rs2Bank::isOpen, 60000);
+            sleep(100,300);
+        }
+        Rs2Bank.depositAllExcept(ItemID.COAL_BAG_12019);
+        Rs2Inventory.waitForInventoryChanges(700);
+        sleep(100,300);
+        Rs2Bank.withdrawAll("Coins");
+        Rs2Inventory.waitForInventoryChanges(700);
+        sleep(100,300);
+        Rs2Npc.interact("blast furnace foreman", "pay");
+        sleepUntil(
+                () -> Rs2Widget.hasWidget("Pay 2,500 coins to use the Blast Furnace"),
+                () -> Rs2Player.isMoving(),
+                600
+        );
+        sleep(100,300);
+        Rs2Widget.clickWidget("Yes");
+        sleep(100,300);
+
+        // After payment, update the last payment time and go back to banking state
+        lastPaymentTime = System.currentTimeMillis();
+        state = State.BANKING;
+    }
+
 
     private boolean hasNoCoalOrOre() {
         return !Rs2Inventory.contains(ItemID.COAL) && !Rs2Inventory.contains(this.config.getBars().getPrimaryOre());
@@ -534,7 +581,6 @@ public class BlastoiseFurnaceScript extends Script {
             Microbot.pauseAllScripts = false;
             Microbot.getSpecialAttackConfigs().reset();
         }
-
 
 
         state = State.BANKING;

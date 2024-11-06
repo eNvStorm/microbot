@@ -23,10 +23,8 @@ import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -2274,10 +2272,7 @@ public class Rs2Inventory {
     }
 
     public static boolean anyPouchUnknown() {
-        return Arrays.stream(Pouch.values())
-                .filter(Pouch::hasPouchInInventory)
-                .peek(pouch -> System.out.println("Pouch: " + pouch + ", Has Required Level: " + pouch.hasRequiredRunecraftingLevel() + ", Is Unknown: " + pouch.isUnknown()))
-                .anyMatch(x -> x.hasRequiredRunecraftingLevel() && x.isUnknown());
+        return Arrays.stream(Pouch.values()).filter(Pouch::hasPouchInInventory).anyMatch(x -> x.hasRequiredRunecraftingLevel() && x.isUnknown());
     }
 
     public static boolean anyPouchEmpty() {
@@ -2299,5 +2294,4 @@ public class Rs2Inventory {
     public static boolean hasDegradedPouch() {
         return Arrays.stream(Pouch.values()).anyMatch(Pouch::isDegraded);
     }
-
 }

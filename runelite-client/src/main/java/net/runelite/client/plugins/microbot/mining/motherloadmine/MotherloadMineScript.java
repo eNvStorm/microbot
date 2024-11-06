@@ -31,7 +31,7 @@ public class MotherloadMineScript extends Script {
     public static final String version = "1.6.7";
     private static final WorldArea WEST_UPPER_AREA = new WorldArea(3748, 5676, 7, 9, 0);
     private static final WorldArea EAST_UPPER_AREA = new WorldArea(3755, 5668, 8, 8, 0);
-    private static final WorldPoint HOPPER_DEPOSIT = new WorldPoint(3748, 5674, 0);
+    private static final WorldPoint HOPPER_DEPOSIT = new WorldPoint(3748, 5673, 0);
     private static final int UPPER_FLOOR_HEIGHT = -490;
     private static final int SACK_LARGE_SIZE = 162;
     private static final int SACK_SIZE = 81;
@@ -196,19 +196,25 @@ public class MotherloadMineScript extends Script {
 
     private void depositHopper() {
         int plane = isUpperFloor() ? 1 : 0;
+        WorldPoint hopperLocation = isUpperFloor() ? new WorldPoint(3755, 5677, 0) : new WorldPoint(3748, 5672, 0);
         Optional<GameObject> hopper = Rs2GameObject.getGameObjects().stream().filter(object ->
-                object.getPlane() == plane
+                object.getWorldLocation().distanceTo(hopperLocation)<2
                 && object.getId() == ObjectID.HOPPER_26674
         ).findFirst();
-
-        if (hopper.isPresent() && Rs2GameObject.interact(hopper.get())) {
+        System.out.println("Hopper is present? : "+hopper.isPresent()+", Hopper Location : x"+hopperLocation.getX()+", y"+hopperLocation.getY());
+        if (Rs2Player.getWorldLocation().distanceTo(hopperLocation)<4 && Rs2GameObject.interact(hopper.get())) {
             Microbot.log(String.format("Using hopper @ (%s)", hopper.get().getWorldLocation()));
             sleepUntil(() -> !Rs2Inventory.isFull());
             if (Microbot.getVarbitValue(Varbits.SACK_NUMBER) > maxSackSize - 28) {
                 emptySack = true;
             }
         } else {
-            Rs2Walker.walkTo(HOPPER_DEPOSIT, 15);
+            if(Rs2Player.getWorldLocation().distanceTo(hopperLocation)<10){
+                Rs2Walker.walkFastCanvas(HOPPER_DEPOSIT);
+                sleep(100,200);
+            } else {
+                Rs2Walker.walkTo(HOPPER_DEPOSIT, 10);
+            }
         }
     }
 

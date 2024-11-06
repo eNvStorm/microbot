@@ -99,7 +99,6 @@ public enum Pouch
 				return GIANT;
 			case ItemID.COLOSSAL_POUCH:
 			case ItemID.COLOSSAL_POUCH_26786:
-				return COLOSSAL;
 			case ItemID.COLOSSAL_POUCH_26906:
 				return COLOSSAL;
 			default:
