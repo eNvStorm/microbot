@@ -62,6 +62,8 @@ public class BanksBankStanderScript extends Script {
     public static String secondIdentity;
     public static String thirdIdentity;
     public static String fourthIdentity;
+    private long timeValue;
+    private int randomNum;
 
     public boolean run(BanksBankStanderConfig config) {
         this.config = config; // Initialize the config object before accessing its parameters
@@ -229,16 +231,22 @@ public class BanksBankStanderScript extends Script {
                     int missingQuantity = Rs2Inventory.count(firstItemId) < firstItemQuantity
                             ? firstItemQuantity - Rs2Inventory.count(firstItemId)
                             : 0;
+                    timeValue = System.currentTimeMillis();
                     Rs2Bank.withdrawX(true, firstItemId, missingQuantity);
-                    sleep(100, 300);
+                    Rs2Inventory.waitForInventoryChanges(600);
+                    randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                 }
             } else {
                 if (Rs2Bank.hasItem(firstItemIdentifier) && Rs2Inventory.count(firstItemIdentifier) < firstItemQuantity) {
                     int missingQuantity = Rs2Inventory.count(firstItemIdentifier) < firstItemQuantity
                             ? firstItemQuantity - Rs2Inventory.count(firstItemIdentifier)
                             : 0;
+                    timeValue = System.currentTimeMillis();
                     Rs2Bank.withdrawX(true, firstItemIdentifier, missingQuantity);
-                    sleep(100, 300);
+                    Rs2Inventory.waitForInventoryChanges(600);
+                    randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                 }
             }
             if (config.secondItemQuantity() > 0) {
@@ -248,11 +256,17 @@ public class BanksBankStanderScript extends Script {
                             int missingQuantity = Rs2Inventory.count(secondItemId) < secondItemQuantity
                                     ? secondItemQuantity - Rs2Inventory.count(secondItemId)
                                     : 0;
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawX(true, secondItemId, missingQuantity);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                            if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         } else {
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawAll(secondItemId);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         }
                     }
                 } else {
@@ -261,11 +275,17 @@ public class BanksBankStanderScript extends Script {
                             int missingQuantity = Rs2Inventory.count(secondItemIdentifier) < secondItemQuantity
                                     ? secondItemQuantity - Rs2Inventory.count(secondItemIdentifier)
                                     : 0;
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawX(true, secondItemIdentifier, missingQuantity);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         } else {
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawAll(true, secondItemIdentifier);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         }
                     }
                 }
@@ -276,16 +296,22 @@ public class BanksBankStanderScript extends Script {
                         int missingQuantity = Rs2Inventory.count(thirdItemId) < thirdItemQuantity
                                 ? thirdItemQuantity - Rs2Inventory.count(thirdItemId)
                                 : 0;
+                        timeValue = System.currentTimeMillis();
                         Rs2Bank.withdrawX(true, thirdItemId, missingQuantity);
-                        sleep(100, 300);
+                        Rs2Inventory.waitForInventoryChanges(600);
+                        randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                     }
                 } else {
                     if (Rs2Bank.hasItem(thirdItemIdentifier) && Rs2Inventory.count(thirdItemIdentifier) < config.thirdItemQuantity()) {
                         int missingQuantity = Rs2Inventory.count(thirdItemIdentifier) < thirdItemQuantity
                                 ? thirdItemQuantity - Rs2Inventory.count(thirdItemIdentifier)
                                 : 0;
+                        timeValue = System.currentTimeMillis();
                         Rs2Bank.withdrawX(true, thirdItemIdentifier, missingQuantity);
-                        sleep(100, 300);
+                        Rs2Inventory.waitForInventoryChanges(600);
+                        randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                     }
                 }
             }
@@ -296,11 +322,17 @@ public class BanksBankStanderScript extends Script {
                             int missingQuantity = Rs2Inventory.count(fourthItemId) < fourthItemQuantity
                                     ? fourthItemQuantity - Rs2Inventory.count(fourthItemId)
                                     : 0;
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawX(true, fourthItemId, missingQuantity);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         } else {
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawAll(fourthItemId);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         }
                     }
                 } else {
@@ -310,16 +342,22 @@ public class BanksBankStanderScript extends Script {
                             int missingQuantity = Rs2Inventory.count(fourthItemIdentifier) < fourthItemQuantity
                                     ? fourthItemQuantity - Rs2Inventory.count(fourthItemIdentifier)
                                     : 0;
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawX(true, fourthItemIdentifier, missingQuantity);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         } else {
+                            timeValue = System.currentTimeMillis();
                             Rs2Bank.withdrawAll(true, fourthItemIdentifier);
-                            sleep(100, 300);
+                            Rs2Inventory.waitForInventoryChanges(600);
+                            randomNum = calculateSleepDuration();
+                    if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 48)); }
                         }
                     }
                 }
             }
-            if (!hasItems()) { Rs2Inventory.waitForInventoryChanges(600); }
+            //if (!hasItems()) { Rs2Inventory.waitForInventoryChanges(600); }
             if (hasItems()) {
                 previousItemChange = (System.currentTimeMillis() - 2500);
                 if (firstItemSum == 0) {
@@ -337,9 +375,12 @@ public class BanksBankStanderScript extends Script {
                 long bankCloseTime = System.currentTimeMillis();
                 while (this.isRunning() && Rs2Bank.isOpen() && (System.currentTimeMillis() - bankCloseTime < 32000)) {
                     Rs2Bank.closeBank();
+                    timeValue = System.currentTimeMillis();
                     sleep = sleepUntilTrue(() -> !Rs2Bank.isOpen(), Rs2Random.between(60, 97), 5000);
-                    sleep(calculateSleepDuration() - 10);
                 }
+                timeValue = System.currentTimeMillis();
+                randomNum = calculateSleepDuration()-10;
+                if (System.currentTimeMillis()-timeValue<randomNum) { sleep((int) (randomNum-(System.currentTimeMillis()-timeValue))); } else { sleep(Rs2Random.between(14, 28)); }
                 if (Rs2Bank.isOpen()) {
                     sleep(calculateSleepDuration());
                     if (this.isRunning()) { Rs2Player.logout(); }
