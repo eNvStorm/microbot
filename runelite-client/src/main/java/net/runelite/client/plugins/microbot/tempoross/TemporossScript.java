@@ -7,8 +7,11 @@ import net.runelite.api.widgets.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
+import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
 import net.runelite.client.plugins.microbot.shortestpath.ShortestPathPlugin;
 import net.runelite.client.plugins.microbot.tempoross.enums.HarpoonType;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.camera.Rs2Camera;
 import net.runelite.client.plugins.microbot.util.coords.Rs2WorldArea;
 import net.runelite.client.plugins.microbot.util.coords.Rs2WorldPoint;
@@ -31,7 +34,7 @@ import static net.runelite.client.plugins.microbot.Microbot.log;
 public class TemporossScript extends Script {
 
     // Version string
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
     public static final Pattern DIGIT_PATTERN = Pattern.compile("(\\d+)");
     public static final int TEMPOROSS_REGION = 12078;
 
@@ -66,6 +69,11 @@ public class TemporossScript extends Script {
         TemporossPlugin.fireClouds = 0;
         TemporossPlugin.waves = 0;
         state = State.INITIAL_CATCH;
+        Rs2Antiban.resetAntibanSettings();
+        Rs2AntibanSettings.naturalMouse = true;
+        Rs2AntibanSettings.simulateMistakes = true;
+        Rs2AntibanSettings.takeMicroBreaks = true;
+        Rs2AntibanSettings.microBreakChance = 0.2;
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() ->{
             try {
                 if (!Microbot.isLoggedIn()) return;
@@ -145,8 +153,8 @@ public class TemporossScript extends Script {
             }
             reset();
             if (Rs2Npc.interact(exitNpc, "Leave")) {
+                Rs2Antiban.takeMicroBreakByChance();
                 sleepUntil(() -> !isInMinigame(), 15000);
-
             }
         }
     }
@@ -163,6 +171,7 @@ public class TemporossScript extends Script {
         TemporossPlugin.fireClouds = 0;
         TemporossPlugin.waves = 0;
         state = State.INITIAL_CATCH;
+        BreakHandlerScript.setLockState(false);
     }
 
     public void handleForfeit() {
@@ -263,6 +272,7 @@ public class TemporossScript extends Script {
         // If we are east of the ladder, interact with it to get on the boat
         if (Rs2Player.getWorldLocation().getX() > startingLadder.getWorldLocation().getX()) {
             if (Rs2GameObject.interact(startingLadder, ((emptyBucketCount > 0 && temporossConfig.solo()) || !temporossConfig.solo()) ? "Climb" : "Solo-start")) {
+                BreakHandlerScript.setLockState(true);
                 Rs2Player.waitForWalking();
                 return;
             }
@@ -310,8 +320,8 @@ public class TemporossScript extends Script {
         List<NPC> allFires = Rs2Npc.getNpcs().filter(npc -> Arrays.asList(npc.getComposition().getActions()).contains("Douse")).collect(Collectors.toList());
         Rs2WorldPoint playerLocation = new Rs2WorldPoint(Microbot.getClient().getLocalPlayer().getWorldLocation());
         sortedFires = allFires.stream()
-                .filter(y -> playerLocation.distanceToPath(Microbot.getClient(),y.getWorldLocation()) < 35)
-                .sorted(Comparator.comparingInt(x -> playerLocation.distanceToPath(Microbot.getClient(), x.getWorldLocation())))
+                .filter(y -> playerLocation.distanceToPath(y.getWorldLocation()) < 35)
+                .sorted(Comparator.comparingInt(x -> playerLocation.distanceToPath( x.getWorldLocation())))
                 .collect(Collectors.toList());
         TemporossOverlay.setNpcList(sortedFires);
     }
@@ -322,8 +332,8 @@ public class TemporossScript extends Script {
                 .collect(Collectors.toList());
         Rs2WorldPoint playerLocation = new Rs2WorldPoint(Microbot.getClient().getLocalPlayer().getWorldLocation());
         sortedClouds = allClouds.stream()
-                .filter(y -> playerLocation.distanceToPath(Microbot.getClient(),y.getWorldLocation()) < 30)
-                .sorted(Comparator.comparingInt(x -> playerLocation.distanceToPath(Microbot.getClient(), x.getWorldLocation())))
+                .filter(y -> playerLocation.distanceToPath(y.getWorldLocation()) < 30)
+                .sorted(Comparator.comparingInt(x -> playerLocation.distanceToPath(x.getWorldLocation())))
                 .collect(Collectors.toList());
         TemporossOverlay.setCloudList(sortedClouds);
     }
@@ -448,6 +458,8 @@ public class TemporossScript extends Script {
     }
 
     private void handleMainLoop() {
+        Rs2Camera.resetZoom();
+        Rs2Camera.resetPitch();
         switch (state) {
             case INITIAL_CATCH:
             case SECOND_CATCH:
@@ -482,9 +494,14 @@ public class TemporossScript extends Script {
                         return;
                     LocalPoint localPoint = LocalPoint.fromWorld(Microbot.getClient().getTopLevelWorldView(),workArea.totemPoint);
                     Rs2Camera.turnTo(localPoint);
-                    Rs2Walker.walkFastLocal(localPoint);
+                    if (Rs2Camera.isTileOnScreen(localPoint)) {
+                        Rs2Walker.walkFastLocal(localPoint);
+                        log("Can't find the fish spot, walking to the totem pole");
+                        Rs2Player.waitForWalking(2000);
+                        return;
+                    }
                     log("Can't find the fish spot, walking to the totem pole");
-                    Rs2Player.waitForWalking(2000);
+                    Rs2Walker.walkTo(WorldPoint.fromLocalInstance(Microbot.getClient(),localPoint));
                     return;
 
                 }
@@ -525,7 +542,7 @@ public class TemporossScript extends Script {
                     log("In cloud, walking to safe point");
 
                     NPC ammoCrate = ammoCrates.stream()
-                            .max(Comparator.comparingInt(value -> new Rs2WorldPoint(value.getWorldLocation()).distanceToPath(Microbot.getClient(), Microbot.getClient().getLocalPlayer().getWorldLocation()))).orElse(null);
+                            .max(Comparator.comparingInt(value -> new Rs2WorldPoint(value.getWorldLocation()).distanceToPath( Microbot.getClient().getLocalPlayer().getWorldLocation()))).orElse(null);
                     if (ammoCrate != null) {
 
                         Rs2Camera.turnTo(ammoCrate);
@@ -539,7 +556,7 @@ public class TemporossScript extends Script {
                 }
 
                 NPC ammoCrate =ammoCrates.stream()
-                        .min(Comparator.comparingInt(value -> new Rs2WorldPoint(value.getWorldLocation()).distanceToPath(Microbot.getClient(), Microbot.getClient().getLocalPlayer().getWorldLocation()))).orElse(null);
+                        .min(Comparator.comparingInt(value -> new Rs2WorldPoint(value.getWorldLocation()).distanceToPath(Microbot.getClient().getLocalPlayer().getWorldLocation()))).orElse(null);
 
                 if (ammoCrate != null) {
                     if (Rs2Player.isInteracting()) {
@@ -547,7 +564,6 @@ public class TemporossScript extends Script {
                             return;
                         }
                     }
-                    ShortestPathPlugin.exit();
                     Rs2Walker.setTarget(null);
                     Rs2Camera.turnTo(ammoCrate);
 
@@ -596,12 +612,14 @@ public class TemporossScript extends Script {
 
     private void walkToSafePoint() {
         LocalPoint localPoint = LocalPoint.fromWorld(Microbot.getClient().getTopLevelWorldView(),workArea.safePoint);
+        WorldPoint worldPoint = WorldPoint.fromLocalInstance(Microbot.getClient(),localPoint);
         Rs2Camera.turnTo(localPoint);
-        if(Rs2Camera.isTileOnScreen(localPoint))
+        if (Rs2Camera.isTileOnScreen(localPoint)) {
             Rs2Walker.walkFastLocal(localPoint);
-        else
-            Rs2Walker.walkTo(getTrueWorldPoint(workArea.safePoint));
-        Rs2Player.waitForWalking(2000);
+            Rs2Player.waitForWalking(2000);
+        } else {
+            Rs2Walker.walkTo(worldPoint);
+        }
     }
 
     private void walkToSpiritPool() {
@@ -610,18 +628,18 @@ public class TemporossScript extends Script {
         assert localPoint != null;
         if(Objects.equals(Microbot.getClient().getLocalDestinationLocation(), localPoint) || Objects.equals(Microbot.getClient().getLocalPlayer().getWorldLocation(), workArea.spiritPoolPoint))
             return;
-        if(Rs2Camera.isTileOnScreen(localPoint))
+        if(Rs2Camera.isTileOnScreen(localPoint)) {
             Rs2Walker.walkFastLocal(localPoint);
+            Rs2Player.waitForWalking(2000);
+        }
         else
             Rs2Walker.walkTo(getTrueWorldPoint(workArea.spiritPoolPoint));
-        Rs2Player.waitForWalking(2000);
     }
 
 
     private boolean inCloud(LocalPoint point) {
         GameObject cloud = Rs2GameObject.getGameObject(point);
         return cloud != null && cloud.getId() == NullObjectID.NULL_41006;
-        //return Rs2GameObject.findObject(NullObjectID.NULL_41006, point) != null;
     }
 
     public static boolean inCloud(WorldPoint point, int radius) {
@@ -631,13 +649,8 @@ public class TemporossScript extends Script {
             return false;
         Rs2WorldArea finalArea = area;
         return sortedClouds.stream().anyMatch(cloud -> finalArea.contains(cloud.getWorldLocation()));
-        //return Rs2GameObject.findObject(NullObjectID.NULL_41006, point) != null;
     }
 
-    private GameObject getClosestCloud() {
-        return sortedClouds.stream()
-                .findFirst().orElse(null);
-    }
 
     @Override
     public void shutdown() {

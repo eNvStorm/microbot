@@ -18,19 +18,16 @@ import net.runelite.client.plugins.microbot.util.magic.Rs2Magic;
 import net.runelite.client.plugins.microbot.util.models.RS2Item;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
-import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+//import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 
 import java.awt.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static net.runelite.api.NullObjectID.*;
 import static net.runelite.api.ObjectID.LADDER_36231;
-import static net.runelite.client.plugins.microbot.util.math.Random.random;
 import static net.runelite.client.plugins.microbot.agility.enums.AgilityCourseName.GNOME_STRONGHOLD_AGILITY_COURSE;
 import static net.runelite.client.plugins.microbot.agility.enums.AgilityCourseName.PRIFDDINAS_AGILITY_COURSE;
 
@@ -56,9 +53,12 @@ public class AgilityScript extends Script {
     public List<AgilityObstacleModel> shayzienbasicCourse = new ArrayList<>();
     public List<AgilityObstacleModel> shayzienadvancedCourse = new ArrayList<>();
 
+    private static Map<Integer, TileObject> objectMap = new HashMap<>();
+
     WorldPoint startCourse = null;
 
     public static int currentObstacle = 0;
+    private static boolean isWalkingToStart = false;
 
     public static final Set<Integer> PORTAL_OBSTACLE_IDS = ImmutableSet.of(
             // Prifddinas portals
@@ -160,10 +160,9 @@ public class AgilityScript extends Script {
     public boolean run(MicroAgilityConfig config) {
         Microbot.enableAutoRunOn = true;
         currentObstacle = 0;
-
-        Rs2Antiban.resetAntibanSettings();
-        Rs2Antiban.antibanSetupTemplates.applyAgilitySetup();
-
+        objectMap.clear();
+        //Rs2Antiban.resetAntibanSettings();
+        //Rs2Antiban.antibanSetupTemplates.applyAgilitySetup();
         init(config);
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
@@ -182,8 +181,11 @@ public class AgilityScript extends Script {
                 // Eat food.
                 Rs2Player.eatAt(config.hitpoints());
 
-                if (Rs2Player.isMoving()) return;
-                if (Rs2Player.isAnimating()) return;
+                if (isWalkingToStart) Microbot.log("isWalkingToStart: true");
+                else if (Rs2Player.isMoving()) return;
+                System.out.println("not moving");
+                if (Rs2Player.isAnimating(200)) return;
+                System.out.println("not animating");
 
                 if (currentObstacle >= getCurrentCourse(config).size()) {
                     currentObstacle = 0;
@@ -209,6 +211,8 @@ public class AgilityScript extends Script {
                         }
                         if (Rs2Player.getWorldLocation().distanceTo(startCourse) < 100) {//extra check for prif course
                             Rs2Walker.walkTo(startCourse, 8);
+                            Microbot.log("Going back to course's starting point");
+                            isWalkingToStart = true;
                             return;
                         }
                     }
@@ -225,7 +229,7 @@ public class AgilityScript extends Script {
                         return;
                     }
                 }
-
+                System.out.println("looking for null... 1");
                 for (Map.Entry<TileObject, Obstacle> entry : AgilityPlugin.getObstacles().entrySet()) {
 
 
@@ -248,11 +252,14 @@ public class AgilityScript extends Script {
 
                         List<AgilityObstacleModel> courses = getCurrentCourse(config);
 
-
-                        TileObject gameObject = Rs2GameObject.findObject(courses.stream()
+                        System.out.println("looking for null... 2");
+                        long timetest = System.currentTimeMillis();
+                        //TODO add to map here, when our map already contains this gameObject we stop using this?
+                        if (!objectMap.containsKey(currentObstacle)) { objectMap.put(currentObstacle, Rs2GameObject.findObject(courses.stream()
                                 .filter(x -> x.getOperationX().check(Rs2Player.getWorldLocation().getX(), x.getRequiredX()) && x.getOperationY().check(Rs2Player.getWorldLocation().getY(), x.getRequiredY()))
-                                .map(AgilityObstacleModel::getObjectID).collect(Collectors.toList()));
-
+                                .map(AgilityObstacleModel::getObjectID).collect(Collectors.toList()))); }
+                        TileObject gameObject = objectMap.get(currentObstacle);
+                        System.out.println("Time to get gameObject : "+(System.currentTimeMillis()-timetest));
                         if (gameObject == null) {
                             Microbot.log("NO agility obstacle found. Please report this as a bug if this keeps happening.");
                             return;
@@ -265,31 +272,34 @@ public class AgilityScript extends Script {
                         if (!Rs2Camera.isTileOnScreen(gameObject)) {
                             Rs2Walker.walkMiniMap(gameObject.getWorldLocation());
                         }
-
+                        System.out.println("looking for null... 3");
+                        sleep(61,97);
                         if (Rs2GameObject.interact(gameObject)) {
+                            isWalkingToStart = false;
                             //LADDER_36231 in prifddinas does not give experience
-                            if (gameObject.getId() != LADDER_36231 && waitForAgilityObstabcleToFinish(agilityExp))
+                            if (gameObject.getId() != LADDER_36231 && waitForAgilityObstabcleToFinish(agilityExp, Microbot.getClient().getBoostedSkillLevel(Skill.HITPOINTS)))
                                 break;
                         }
-
                     }
                 }
             } catch (Exception ex) {
                 Microbot.log(ex.getMessage());
                 ex.printStackTrace();
             }
-        }, 0, 100, TimeUnit.MILLISECONDS);
+        }, 0, 30, TimeUnit.MILLISECONDS);
         return true;
     }
 
     @Override
     public void shutdown() {
+        objectMap.clear();
         super.shutdown();
     }
 
-    private boolean waitForAgilityObstabcleToFinish(final int agilityExp) {
-        sleepUntilOnClientThread(() -> agilityExp != Microbot.getClient().getSkillExperience(Skill.AGILITY), 10000);
-
+    private boolean waitForAgilityObstabcleToFinish(final int agilityExp, final int previousHp) {
+        System.out.println("waiting for agility xp");
+        sleepUntilOnClientThread(() -> (agilityExp != Microbot.getClient().getSkillExperience(Skill.AGILITY) || previousHp != Microbot.getClient().getBoostedSkillLevel(Skill.HITPOINTS)), 15000);
+        System.out.println("detected agility xp");
 
         if (agilityExp != Microbot.getClient().getSkillExperience(Skill.AGILITY) || Microbot.getClient().getTopLevelWorldView().getPlane() == 0) {
             currentObstacle++;

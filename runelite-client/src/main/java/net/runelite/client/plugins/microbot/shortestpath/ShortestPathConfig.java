@@ -70,7 +70,7 @@ public interface ShortestPathConfig extends Config {
             section = sectionSettings
     )
     default boolean useCanoes() {
-        return false;
+        return true;
     }
 
     @ConfigItem(
@@ -81,7 +81,7 @@ public interface ShortestPathConfig extends Config {
             section = sectionSettings
     )
     default boolean useCharterShips() {
-        return false;
+        return true;
     }
 
     @ConfigItem(
@@ -148,8 +148,7 @@ public interface ShortestPathConfig extends Config {
             description = "Whether to include teleportation items from the player's inventory and equipment.<br>" +
                     "Options labelled (perm) only use permanent non-charge items.",
             position = 12,
-            section = sectionSettings,
-            hidden = true
+            section = sectionSettings
     )
     default TeleportationItem useTeleportationItems() {
         return TeleportationItem.INVENTORY;
@@ -263,7 +262,7 @@ public interface ShortestPathConfig extends Config {
             section = sectionSettings
     )
     default TileCounter showTileCounter() {
-        return TileCounter.DISABLED;
+        return TileCounter.REMAINING;
     }
 
     @ConfigItem(
@@ -317,6 +316,28 @@ public interface ShortestPathConfig extends Config {
             section = sectionSettings
     )
     default boolean useNpcs() {
+        return true;
+    }
+
+    @ConfigItem(
+            keyName = "useQuetzals",
+            name = "Use quetzals",
+            description = "Whether to include quetzals in the path.<br>",
+            position = 25,
+            section = sectionSettings
+    )
+    default boolean useQuetzals() {
+        return true;
+    }
+
+    @ConfigItem(
+            keyName = "useMagicCarpets",
+            name = "Use Magic Carpets",
+            description = "Whether to include magic carpets in the path.<br>",
+            position = 26,
+            section = sectionSettings
+    )
+    default boolean useMagicCarpets() {
         return true;
     }
 

@@ -2,7 +2,7 @@ package net.runelite.client.plugins.microbot.mining.shootingstar;
 
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.client.plugins.inventorysetups.MInventorySetupsPlugin;
+import net.runelite.client.plugins.microbot.inventorysetups.MInventorySetupsPlugin;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
@@ -228,9 +228,9 @@ public class ShootingStarScript extends Script {
 
     private boolean isUsingInventorySetup(ShootingStarConfig config) {
         boolean isInventorySetupPluginEnabled = Microbot.isPluginEnabled(MInventorySetupsPlugin.class);
-        boolean hasInventorySetupConfigured = MInventorySetupsPlugin.getInventorySetups().stream().anyMatch(x -> x.getName().equalsIgnoreCase(config.inventorySetupName()));
+        if (!isInventorySetupPluginEnabled) return false;
 
-        return isInventorySetupPluginEnabled && hasInventorySetupConfigured;
+        return MInventorySetupsPlugin.getInventorySetups().stream().anyMatch(x -> x.getName().equalsIgnoreCase(config.inventorySetupName()));
     }
 
     private boolean hasSelectedStar() {
@@ -399,12 +399,14 @@ public class ShootingStarScript extends Script {
     }
 
     private boolean shouldBreak() {
-        boolean isReadyToBreak = BreakHandlerScript.breakIn <= 1;
+        if (!plugin.isBreakHandlerEnabled()) return false;
 
-        return plugin.isBreakHandlerEnabled() && isReadyToBreak;
+        return BreakHandlerScript.breakIn <= 1;
     }
 
     public void toggleLockState(boolean lock) {
+        if (!plugin.isBreakHandlerEnabled()) return;
+        
         if (plugin.isBreakHandlerEnabled() && plugin.useBreakAtBank()) {
             if (lock && !BreakHandlerScript.isLockState()) {
                 BreakHandlerScript.setLockState(true);

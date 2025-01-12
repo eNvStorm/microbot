@@ -5,10 +5,10 @@ import net.runelite.client.plugins.microbot.util.misc.Rs2Food;
 
 @ConfigGroup(BlueDragonsPlugin.CONFIG)
 @ConfigInformation("<center><p style='font-weight: bold;'>[00] BLUE DRAGON FARMER</p> <br />" +
-        "<hr style='width: 75%; border-top: 1px solid #000;'/>" +
-        "<p style='color: black;'>The plugin will travel/kill and bank as needed. Early prayer farmer!</p>" +
+        "<hr style='width: 75%; border-top: 1px solid white;'/>" +
+        "<p style='color: white;'>The plugin will travel/kill and bank as needed. Early prayer farmer!</p>" +
         "<hr style='width: 75%; border-top: 1px solid #000;'/> </center> <br />" +
-        "1. Equip your gear <br />" +
+        "1. Equip your <b>RANGED</b> gear <br />" +
         "2. <b style='color: red;'>MUST</b> have Falador teleport (runes/teletab) <br />" +
         "3. Correct food amount from config <br /> <br />" +
         "<center>Press <b style='color: green;'>START</b> and enjoy :)</center>")
@@ -27,8 +27,7 @@ public interface BlueDragonsConfig extends Config {
     @ConfigSection(
             name = "Loot Options",
             description = "Settings related to item looting",
-            position = 1,
-            closedByDefault = false
+            position = 1
     )
     String lootSection = "lootSection";
 
@@ -56,8 +55,7 @@ public interface BlueDragonsConfig extends Config {
     @ConfigSection(
             name = "Food Options",
             description = "Settings for selecting food and health threshold",
-            position = 2,
-            closedByDefault = false
+            position = 2
     )
     String foodSection = "foodSection";
 
@@ -89,5 +87,24 @@ public interface BlueDragonsConfig extends Config {
     )
     default int eatAtHealthPercent() {
         return 50;
+    }
+
+    @ConfigSection(
+            name = "Debug",
+            description = "Debugging",
+            position = 3,
+            closedByDefault = true
+    )
+    String debugSection = "debugSection";
+
+    @ConfigItem(
+            keyName = "debugLogs",
+            name = "Enable Debug Logs",
+            description = "Enable detailed debug logging for this script",
+            section = debugSection
+
+    )
+    default boolean debugLogs() {
+        return false;
     }
 }

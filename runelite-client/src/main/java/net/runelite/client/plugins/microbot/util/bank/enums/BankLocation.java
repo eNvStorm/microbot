@@ -29,6 +29,7 @@ public enum BankLocation {
     CASTLE_WARS(new WorldPoint(2443, 3083, 0)),
     CATHERBY(new WorldPoint(2808, 3441, 0)),
     COOKS_GUILD(new WorldPoint(3147,3450,0)),
+    CORSAIR_COVE(new WorldPoint(2570, 2864, 0)),
     CRAFTING_GUILD(new WorldPoint(2936, 3281, 0)),
     DIHN_BANK(new WorldPoint(1640, 3944, 0)),
     DRAYNOR(new WorldPoint(3092, 3243, 0)),
@@ -72,6 +73,7 @@ public enum BankLocation {
     PEST_CONTROL(new WorldPoint(2667, 2653, 0)),
     PISCARILIUS(new WorldPoint(1803, 3790, 0)),
     PORT_KHAZARD(new WorldPoint(2664, 3161, 0)),
+    PORT_PHASMATYS(new WorldPoint(3688, 3467, 0)),
     PRIFDDINAS(new WorldPoint(3257, 6106, 0)),
     ROGUES_DEN_EMERALD_BENEDICT(new WorldPoint(3043, 4973, 1)),
     ROGUES_DEN_CHEST(new WorldPoint(3040, 4969, 1)),
@@ -157,6 +159,14 @@ public enum BankLocation {
             case MAGE_TRAINING_ARENA:
                 if (hasLineOfSight && isMember()) return true;
                 return isMember();
+            case PORT_PHASMATYS:
+                if (hasLineOfSight && isMember()) return true;
+                return isMember() && Rs2Player.getQuestState(Quest.GHOSTS_AHOY) == QuestState.FINISHED;
+            case CORSAIR_COVE:
+                // Requires The Corsair Curse
+                return Rs2Player.getQuestState(Quest.THE_CORSAIR_CURSE) == QuestState.FINISHED;
+            case SOPHANEM:
+                return Rs2Player.getQuestState(Quest.CONTACT) == QuestState.FINISHED;
             default:
                 return true;
         }

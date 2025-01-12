@@ -1,8 +1,11 @@
 package net.runelite.client.plugins.microbot.util.dialogues;
 
+import net.runelite.api.Varbits;
 import net.runelite.api.widgets.InterfaceID;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.util.keyboard.Rs2Keyboard;
+import net.runelite.client.plugins.microbot.util.misc.Rs2UiHelper;
 import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
 
 import java.awt.event.KeyEvent;
@@ -11,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static net.runelite.client.plugins.microbot.util.Global.sleepUntil;
 import static net.runelite.client.plugins.microbot.util.Global.sleepUntilTrue;
 
 public class Rs2Dialogue {
@@ -43,7 +45,7 @@ public class Rs2Dialogue {
      */
     public static boolean hasContinue() {
         return hasNPCContinue() || hasPlayerContinue() || hasDeathContinue() ||
-                hasSpriteContinue() || hasTutContinue();
+                hasSpriteContinue() || hasTutContinue() || hasItemContinue();
     }
 
     /**
@@ -98,6 +100,16 @@ public class Rs2Dialogue {
     }
 
     /**
+     * Checks if there is a "click here to continue" option for an item
+     * This includes items given when doing quests for example
+     *
+     * @return true if the "Continue" option is visible in the item dialogue, false otherwise.
+     */
+    private static boolean hasItemContinue() {
+        return Rs2Widget.isWidgetVisible(InterfaceID.DIALOG_SPRITE, 0);
+    }
+
+    /**
      * Checks if the current dialogue contains selectable options.
      *
      * @return true if has dialog options is visible
@@ -105,7 +117,49 @@ public class Rs2Dialogue {
     public static boolean hasSelectAnOption() {
         boolean isWidgetVisible = Rs2Widget.isWidgetVisible(InterfaceID.DIALOG_OPTION, 1);
         if (!isWidgetVisible) return false;
-        return Rs2Widget.getWidget(InterfaceID.DIALOG_OPTION, 1).getDynamicChildren() != null;
+        
+        Widget widget = Rs2Widget.getWidget(InterfaceID.DIALOG_OPTION, 1);
+        if (widget == null) return false;
+        
+        return widget.getDynamicChildren() != null;
+    }
+
+    /**
+     * Retrieves the question text from the dialogue, which is usually the first widget in the dialogue options.
+     *
+     * @return the text of the question widget, or null if no question is present.
+     */
+    public static String getQuestion() {
+        if (!hasSelectAnOption()) return null;
+
+        Widget[] dynamicWidgetOptions = Rs2Widget.getWidget(InterfaceID.DIALOG_OPTION, 1).getDynamicChildren();
+        if (dynamicWidgetOptions != null && dynamicWidgetOptions.length > 0) {
+            return dynamicWidgetOptions[0].getText();
+        }
+        return null;
+    }
+
+    /**
+     * Checks if the current dialogue contains a question that matches the specified text.
+     *
+     * @param text  the text to search for in the dialogue question.
+     * @param exact if true, requires an exact match; if false, allows partial matches.
+     * @return true if a matching dialogue question is found, otherwise false.
+     */
+    public static boolean hasQuestion(String text, boolean exact) {
+        String question = getQuestion();
+        if (question == null) return false;
+        return exact ? question.equalsIgnoreCase(text) : question.toLowerCase().contains(text.toLowerCase());
+    }
+
+    /**
+     * Checks if the current dialogue contains a question that partially matches the specified text.
+     *
+     * @param text the text to search for in the dialogue question.
+     * @return true if a partially matching dialogue question is found, otherwise false.
+     */
+    public static boolean hasQuestion(String text) {
+        return hasQuestion(text, false);
     }
 
     /**
@@ -261,8 +315,19 @@ public class Rs2Dialogue {
      * @return true if the specified dialogue option appears within the timeout period, otherwise false
      */
     public static boolean sleepUntilHasDialogueOption(String text) {
-        return sleepUntilTrue(() -> hasDialogueOption(text));
+        return sleepUntilHasDialogueOption(text, false);
     }
+
+    /**
+     * Pauses the current thread until a specified dialogue option becomes available.
+     *
+     * @param text the text of the dialogue option to wait for
+     * @return true if the specified dialogue option appears within the timeout period, otherwise false
+     */
+    public static boolean sleepUntilHasDialogueOption(String text, boolean exact) {
+        return sleepUntilTrue(() -> hasDialogueOption(text, exact));
+    }
+
 
     /**
      * Pauses the current thread until the player is in a dialogue.
@@ -271,6 +336,15 @@ public class Rs2Dialogue {
      */
     public static boolean sleepUntilInDialogue() {
         return sleepUntilTrue(Rs2Dialogue::isInDialogue);
+    }
+
+    /**
+     * Pauses the current thread until the player is out of current dialogue.
+     *
+     * @return true if the player exits dialogue within the timeout period, otherwise false
+     */
+    public static boolean sleepUntilNotInDialogue() {
+        return sleepUntilTrue(() -> !isInDialogue());
     }
 
     /**
@@ -289,5 +363,230 @@ public class Rs2Dialogue {
      */
     public static boolean sleepUntilHasContinue() {
         return sleepUntilTrue(Rs2Dialogue::hasContinue);
+    }
+
+    /**
+     * Pauses the current thread until a dialogue question containing the specified text becomes available.
+     *
+     * @param text  the text to search for in the dialogue question.
+     * @param exact if true, requires an exact match; if false, allows partial matches.
+     * @return true if the dialogue question appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasQuestion(String text, boolean exact) {
+        return sleepUntilTrue(() -> hasQuestion(text, exact));
+    }
+
+    /**
+     * Pauses the current thread until a dialogue question containing the specified text becomes available,
+     * allowing partial matches.
+     *
+     * @param text the text to search for in the dialogue question.
+     * @return true if the dialogue question appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasQuestion(String text) {
+        return sleepUntilHasQuestion(text, false);
+    }
+    
+    /**
+     * Checks if the combination dialogue widget is currently visible.
+     *
+     * @return true if the combination dialogue widget is visible, false otherwise.
+     */
+    public static boolean hasCombinationDialogue() {
+        return Rs2Widget.isWidgetVisible(270, 1);
+    }
+
+    /**
+     * Retrieves a list of widgets representing the options in the combination dialogue.
+     *
+     * <p>This method checks if the combination dialogue widget is visible and, if so, collects
+     * the child widgets from the specified interface section. If no combination dialogue is visible,
+     * an empty list is returned.
+     *
+     * @return a list of widgets representing the combination dialogue options, or an empty list if no options are found.
+     */
+    public static List<Widget> getCombinationOptions() {
+        if (!hasCombinationDialogue()) return Collections.emptyList();
+
+        List<Widget> options = new ArrayList<>();
+        if (Rs2Widget.isWidgetVisible(270, 13)) {
+            for (Widget widget : Rs2Widget.getWidget(270, 13).getStaticChildren()) {
+                if (widget != null && widget.getActions() != null && widget.getActions().length > 0) {
+                    options.add(widget);
+                }
+            }
+        }
+        return options;
+    }
+
+    /**
+     * Retrieves the text content of the current dialogue, if any.
+     *
+     * <p>This method checks if the player is currently in a dialogue state and retrieves the
+     * text from a specific widget associated with dialogue content. If no dialogue is active
+     * or the relevant widget is not visible, the method returns {@code null}.
+     *
+     * @return the text content of the dialogue, or {@code null} if no dialogue is active.
+     */
+    public static String getDialogueText() {
+        if (!isInDialogue()) return null;
+
+        if (Rs2Widget.isWidgetVisible(229, 1)) {
+            return Rs2UiHelper.stripColTags(Rs2Widget.getWidget(229, 1).getText());
+        } else if (Rs2Widget.isWidgetVisible(231, 6)) {
+            return Rs2UiHelper.stripColTags(Rs2Widget.getWidget(231, 6).getText());
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks if the current dialogue contains the specified text.
+     *
+     * @param text  the text to search for in the dialogue.
+     * @param exact if true, requires an exact match; if false, allows partial matches.
+     * @return true if the specified text is found in the dialogue, otherwise false.
+     */
+    public static boolean hasDialogueText(String text, boolean exact) {
+        String dialogueText = getDialogueText();
+        if (dialogueText == null) return false;
+        return exact ? dialogueText.equalsIgnoreCase(text) : dialogueText.toLowerCase().contains(text.toLowerCase());
+    }
+
+    /**
+     * Checks if the current dialogue contains the specified text, allowing partial matches.
+     *
+     * @param text the text to search for in the dialogue.
+     * @return true if the specified text is found in the dialogue, otherwise false.
+     */
+    public static boolean hasDialogueText(String text) {
+        return hasDialogueText(text, false);
+    }
+
+    /**
+     * Pauses the current thread until the dialogue contains the specified text.
+     *
+     * @param text  the text to wait for in the dialogue.
+     * @param exact if true, waits for an exact match; if false, waits for a partial match.
+     * @return true if the dialogue text appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasDialogueText(String text, boolean exact) {
+        return sleepUntilTrue(() -> hasDialogueText(text, exact));
+    }
+
+    /**
+     * Pauses the current thread until the dialogue contains the specified text, allowing partial matches.
+     *
+     * @param text the text to wait for in the dialogue.
+     * @return true if the dialogue text appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasDialogueText(String text) {
+        return sleepUntilHasDialogueText(text, false);
+    }
+
+    /**
+     * Finds a specific combination dialogue option widget that matches the provided text.
+     *
+     * @param text  the text to search for within the combination dialogue options.
+     * @param exact if true, the search will look for an exact text match; if false, partial matches are allowed.
+     * @return the widget matching the specified text, or null if no match is found.
+     */
+    public static Widget getCombinationOption(String text, boolean exact) {
+        if (!hasCombinationDialogue() || getCombinationOptions().isEmpty()) return null;
+
+        return getCombinationOptions().stream()
+                .filter(widget -> {
+                    String widgetName = Rs2UiHelper.stripColTags(widget.getName());
+                    return exact ? widgetName.equalsIgnoreCase(text) : widgetName.toLowerCase().contains(text.toLowerCase());
+                })
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Finds a specific combination dialogue option widget that partially matches the provided text.
+     *
+     * @param text the text to search for within the combination dialogue options.
+     * @return the widget matching the specified text, or null if no match is found.
+     */
+    public static Widget getCombinationOption(String text) {
+        return getCombinationOption(text, false);
+    }
+
+    /**
+     * Clicks on a combination dialogue option matching the specified text.
+     *
+     * @param text  the text of the option to click on.
+     * @param exact if true, the text must match exactly; if false, partial matches are allowed.
+     * @return true if the option was successfully clicked, false if no matching option was found.
+     */
+    public static boolean clickCombinationOption(String text, boolean exact) {
+        if (!hasCombinationDialogue()) return false;
+
+        Widget option = getCombinationOption(text, exact);
+        
+        if (option == null) return false;
+        
+        return Rs2Widget.clickWidget(option);
+        
+    }
+
+    /**
+     * Clicks on a combination dialogue option that partially matches the specified text.
+     *
+     * @param text the text of the option to click on.
+     * @return true if the option was successfully clicked, false if no matching option was found.
+     */
+    public static boolean clickCombinationOption(String text) {
+        return clickCombinationOption(text, false);
+    }
+
+    /**
+     * Pauses the current thread until the combination dialogue becomes visible.
+     *
+     * @return true if the combination dialogue appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasCombinationDialogue() {
+        return sleepUntilTrue(Rs2Dialogue::hasCombinationDialogue);
+    }
+
+    /**
+     * Pauses the current thread until a specific combination dialogue option becomes available.
+     *
+     * <p>This method continuously checks for a combination dialogue option that matches the specified
+     * text. If an exact match is required, it will search for an option that exactly matches the text; 
+     * otherwise, it will look for an option containing the text.
+     *
+     * @param text  the text to search for within the combination dialogue options.
+     * @param exact if true, requires an exact match; if false, allows partial matches.
+     * @return true if the combination dialogue option appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasCombinationOption(String text, boolean exact) {
+        return sleepUntilTrue(() -> getCombinationOption(text, exact) != null);
+    }
+
+    /**
+     * Pauses the current thread until a specific combination dialogue option containing the specified text becomes available.
+     *
+     * <p>This method checks for a combination dialogue option that partially matches the specified text.
+     *
+     * @param text the text to search for within the combination dialogue options.
+     * @return true if a combination dialogue option containing the text appears within the timeout period, otherwise false.
+     */
+    public static boolean sleepUntilHasCombinationOption(String text) {
+        return sleepUntilHasCombinationOption(text, false);
+    }
+    
+    /**
+     * Determines whether the game is currently in a cutscene.
+     * <p>
+     * This method checks the value of a specific game state variable (varbit 542)
+     * to determine if a cutscene is active. If the value of varbit 542 is 1, the
+     * game is considered to be in a cutscene; otherwise, it is not.
+     *
+     * @return {@code true} if the game is currently in a cutscene; {@code false} otherwise.
+     */
+    public static boolean isInCutScene() {
+        return Microbot.getVarbitValue(542) == 1;
     }
 }

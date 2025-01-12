@@ -19,6 +19,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginInstantiationException;
 import net.runelite.client.plugins.PluginManager;
+import net.runelite.client.plugins.microbot.qualityoflife.scripts.pouch.PouchOverlay;
 import net.runelite.client.plugins.microbot.qualityoflife.scripts.pouch.PouchScript;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
@@ -39,6 +40,7 @@ import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
 import java.lang.reflect.InvocationTargetException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @PluginDescriptor(
         name = PluginDescriptor.Default + "Microbot",
@@ -87,6 +89,9 @@ public class MicrobotPlugin extends Plugin {
     private NaturalMouse naturalMouse;
     @Inject
     private PouchScript pouchScript;
+    @Inject
+    private PouchOverlay pouchOverlay;
+    private volatile AtomicInteger ticks = new AtomicInteger(0);
 
     @Override
     protected void startUp() throws AWTException {
@@ -106,12 +111,15 @@ public class MicrobotPlugin extends Plugin {
         Microbot.setInfoBoxManager(infoBoxManager);
         Microbot.setWorldMapPointManager(worldMapPointManager);
         Microbot.setChatMessageManager(chatMessageManager);
+        Microbot.setConfigManager(configManager);
         if (overlayManager != null) {
             overlayManager.add(microbotOverlay);
         }
 
         Microbot.setPouchScript(pouchScript);
         pouchScript.startUp();
+        overlayManager.add(pouchOverlay);
+
 
         new InputSelector(clientToolbar);
     }
@@ -149,12 +157,9 @@ public class MicrobotPlugin extends Plugin {
     }
 
     @Subscribe
-    public void onMenuOpened(MenuOpened event) {
-    }
-
-    @Subscribe
     public void onVarbitChanged(VarbitChanged event) {
         Rs2Player.handlePotionTimers(event);
+        Rs2Player.handleTeleblockTimer(event);
     }
     
     @Subscribe
@@ -240,6 +245,21 @@ public class MicrobotPlugin extends Plugin {
                 Microbot.getPouchScript().startUp();
             } else {
                 Microbot.getPouchScript().shutdown();
+            }
+        }
+    }
+    
+    @Subscribe
+    public void onGameTick(GameTick event) {
+        if (client.getLocalPlayer().isInteracting()) {
+            if (client.getLocalPlayer().getInteracting() instanceof Player 
+                    || client.getLocalPlayer().getInteracting() instanceof NPC) {
+                if (ticks.get() == 2) {
+                    ticks.set(0);
+                    Rs2Player.updateCombatTime();
+                } else {
+                    ticks.incrementAndGet();
+                }
             }
         }
     }

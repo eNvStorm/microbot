@@ -9,8 +9,6 @@ import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.smelting.enums.AnvilItem;
 import net.runelite.client.plugins.microbot.smelting.enums.Bars;
 import net.runelite.client.plugins.microbot.sticktothescript.common.Functions;
-import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
-import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.dialogues.Rs2Dialogue;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
@@ -22,6 +20,7 @@ import net.runelite.client.plugins.microbot.util.widget.Rs2Widget;
 import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 enum State {
@@ -33,11 +32,11 @@ enum State {
 
 public class VarrockAnvilScript extends Script {
 
-    public static String version = "1.0.0";
+    public static String version = "1.0.1";
     public State state = State.BANKING;
     public String debug = "";
     private boolean expectingXPDrop = false;
-
+    static int staminaTimer;
     private static WorldPoint AnvilLocation = new WorldPoint(3188, 3426, 0);
     private static WorldPoint BankLocation = new WorldPoint(3185, 3438, 0);
     private static List<Integer> AnvilIDs = Arrays.asList(2097);
@@ -50,24 +49,9 @@ public class VarrockAnvilScript extends Script {
 
         Microbot.enableAutoRunOn = false;
 
-        Rs2Antiban.resetAntibanSettings();
-        Rs2Antiban.antibanSetupTemplates.applySmithingSetup();
-        Rs2AntibanSettings.dynamicActivity = true;
-        Rs2AntibanSettings.dynamicIntensity = true;
-        Rs2AntibanSettings.actionCooldownChance = 0.1;
-        Rs2AntibanSettings.microBreakChance = 0.01;
-        Rs2AntibanSettings.microBreakDurationLow = 0;
-        Rs2AntibanSettings.microBreakDurationHigh = 3;
-
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             if (!super.run() || !Microbot.isLoggedIn()) {
                 debug("Not running");
-                return;
-            }
-
-            if (Rs2AntibanSettings.actionCooldownActive) {
-                debug("Cool down active");
-                Rs2Antiban.actionCooldown();
                 return;
             }
 
@@ -94,9 +78,7 @@ public class VarrockAnvilScript extends Script {
 
                     if (expectingXPDrop && Rs2Player.waitForXpDrop(Skill.SMITHING, 4500)) {
                         debug("Smithing in progress");
-                        Rs2Antiban.actionCooldown();
-                        Rs2Antiban.takeMicroBreakByChance();
-                        sleep(256, 789);
+                        if(this.isRunning()) sleep(256, 789);
                         return;
                     }
 
@@ -106,19 +88,19 @@ public class VarrockAnvilScript extends Script {
                         debug("Using anvil");
 
                         // Wait until anvil screen is open
-                        sleepUntil(() -> Rs2Widget.getWidget(AnvilContainerWidgetID, 1) != null, 5000);
-                        sleep(186, 480);
+                        if(this.isRunning()) sleepUntil(() -> Rs2Widget.getWidget(AnvilContainerWidgetID, 1) != null, 5000);
+                        if(this.isRunning()) sleep(186, 480);
 
                         if (Rs2Widget.getWidget(AnvilContainerWidgetID, 1) != null) {
                             if (Microbot.getVarbitPlayerValue(AnvilMakeVarbitPlayer) < Rs2Inventory.count(barType.getId())) {
                                 debug("Selecting 'All' in the anvil");
                                 Rs2Widget.clickWidget(312, 7);
-                                sleep(186, 480);
+                                if(this.isRunning()) sleep(186, 480);
                             }
 
                             Rs2Widget.clickWidget(AnvilContainerWidgetID, anvilItem.getChildId());
                             expectingXPDrop = true;
-                            sleep(186, 480);
+                            if(this.isRunning()) sleep(186, 480);
                         }
                     } else {
                         if (Rs2Player.isMoving()) {
@@ -127,7 +109,7 @@ public class VarrockAnvilScript extends Script {
 
 //                    debug("Walking to anvil");
 //                    Rs2Walker.walkTo(AnvilLocation, 8);
-//                    sleep(180, 540);
+//                    if(this.isRunning()) sleep(180, 540);
                     }
 
                     break;
@@ -158,7 +140,7 @@ public class VarrockAnvilScript extends Script {
                     }
 
                     if (!Rs2Player.isRunEnabled()) {
-                        debug("Enabled run for fishing spot");
+                        debug("Enabled run to anvil");
                         Rs2Player.toggleRunEnergy(true);
                     }
 
@@ -169,10 +151,7 @@ public class VarrockAnvilScript extends Script {
                 default:
                     break;
             }
-
-            Rs2Antiban.actionCooldown();
-            Rs2Antiban.takeMicroBreakByChance();
-            sleep(256, 789);
+            if(this.isRunning()) sleep(256, 789);
             return;
         }, 0, 1000, TimeUnit.MILLISECONDS);
         return true;
@@ -204,15 +183,15 @@ public class VarrockAnvilScript extends Script {
     // Handle all banking actions
     private void bank(Bars barType) {
         if (Rs2Bank.openBank()) {
-            sleepUntil(Rs2Bank::isOpen);
+            if (this.isRunning()) sleepUntil(Rs2Bank::isOpen);
             debug("Bank is open");
-            Rs2Bank.depositAllExcept(ItemID.HAMMER, barType.getId());
+            if (this.isRunning()) Rs2Bank.depositAllExcept(ItemID.HAMMER, barType.getId());
             debug("Items deposited");
-            sleep(180, 540);
-
+            if (this.isRunning()) sleep(180, 540);
+            if ( staminaTimer <= 2 && (Microbot.getClient().getEnergy() < 7500)) { useStaminaPotions(); }
             if (!Rs2Inventory.hasItem("Hammer")) {
-                Rs2Bank.withdrawOne("Hammer");
-                sleepUntil(() -> Rs2Inventory.hasItem("Hammer"), 3500);
+                if (this.isRunning()) Rs2Bank.withdrawOne("Hammer");
+                if (this.isRunning()) sleepUntil(() -> Rs2Inventory.hasItem("Hammer"), 3500);
 
                 // Exit if we did not end up finding it.
                 if (!Rs2Inventory.hasItem("Hammer")) {
@@ -220,12 +199,12 @@ public class VarrockAnvilScript extends Script {
                     Microbot.showMessage("Could not find hammer in bank.");
                     shutdown();
                 }
-                sleep(180, 540);
+                if(this.isRunning()) sleep(180, 540);
 
             }
 
-            Rs2Bank.withdrawAll(barType.toString());
-            sleepUntil(() -> Rs2Inventory.hasItem(barType.toString()), 3500);
+            if (this.isRunning()) Rs2Bank.withdrawAll(barType.toString());
+            if (this.isRunning()) sleepUntil(() -> Rs2Inventory.hasItem(barType.toString()), 3500);
 
             // Exit if we did not end up finding it.
             if (!Rs2Inventory.hasItem(barType.toString())) {
@@ -233,11 +212,44 @@ public class VarrockAnvilScript extends Script {
                 Microbot.showMessage("Could not find bars in bank.");
                 shutdown();
             }
-            sleep(180, 540);
-            Rs2Bank.closeBank();
+            if (this.isRunning()) sleep(180, 540);
+            if (this.isRunning()) Rs2Bank.closeBank();
         }
     }
-
+    private void useStaminaPotions(){
+        System.out.println("stamina timer : " + staminaTimer);
+        if(Microbot.getClient().getEnergy() < 6400) {
+            if (this.isRunning()) { Rs2Bank.withdrawOne("Energy potion"); }
+            if (this.isRunning()) { sleepUntil(() -> Rs2Inventory.hasItem("Energy potion")); }
+            String energyPotion = Rs2Inventory.get("Energy potion").getName();
+            if (this.isRunning()) { sleep(61, 97); }
+            if (this.isRunning()) { Rs2Inventory.interact("Energy potion", "drink"); }
+            if (this.isRunning()) { sleepUntil(() -> !Objects.equals(energyPotion, Rs2Inventory.get("Energy potion").getName()), 97000); }
+            if (this.isRunning()) { sleep(161, 197); }
+            if (this.isRunning() && Rs2Inventory.hasItem("Energy potion")) {
+                if(this.isRunning()) { Rs2Bank.depositOne("Energy potion"); }
+                if(this.isRunning()) { sleepUntil(() -> !Rs2Inventory.hasItem("Energy potion"), 97000); }
+            }
+        }
+        if (Microbot.getClient().getEnergy() < 7500) {
+            if (this.isRunning()) { Rs2Bank.withdrawOne("Stamina potion"); }
+            if (this.isRunning()) {  sleepUntil(() -> Rs2Inventory.hasItem("Stamina potion")); }
+            String staminaPotion = Rs2Inventory.get("Stamina potion").getName();
+            if (this.isRunning()) {  sleep(61, 97); }
+            if (this.isRunning()) { Rs2Inventory.interact("Stamina potion", "drink"); }
+            if (this.isRunning()) {  sleepUntil(() -> staminaTimer > 1 && !Objects.equals(staminaPotion, Rs2Inventory.get("Stamina potion").getName()), 97000); }
+            if (this.isRunning()) {  sleep(161, 197); }
+            if (this.isRunning() && (Rs2Inventory.hasItem("Stamina potion") || Rs2Inventory.hasItem(229))) {
+                if (this.isRunning() && Rs2Inventory.hasItem("Stamina potion")) {
+                    if(this.isRunning()) { Rs2Bank.depositOne("Stamina potion"); }
+                    if(this.isRunning()) { if(this.isRunning()) sleepUntil(() -> !Rs2Inventory.hasItem("Stamina"), 97000); }
+                } else {
+                    if(this.isRunning()) { Rs2Bank.depositOne(229); }
+                    if(this.isRunning()) { if(this.isRunning()) sleepUntil(() -> !Rs2Inventory.hasItem(229)); } }
+            }
+        }
+        if (this.isRunning()) {  sleep(161, 197); }
+    }
     private void debug(String msg) {
         debug = msg;
         System.out.println(msg);
@@ -246,6 +258,5 @@ public class VarrockAnvilScript extends Script {
     @Override
     public void shutdown() {
         super.shutdown();
-        Rs2Antiban.resetAntibanSettings();
     }
 }

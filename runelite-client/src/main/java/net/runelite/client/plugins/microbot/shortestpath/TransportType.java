@@ -9,6 +9,7 @@ public enum TransportType {
     CHARTER_SHIP,
     SHIP,
     FAIRY_RING,
+    QUETZAL,
     GNOME_GLIDER,
     MINECART,
     SPIRIT_TREE,
@@ -17,5 +18,6 @@ public enum TransportType {
     TELEPORTATION_ITEM,
     TELEPORTATION_SPELL,
     WILDERNESS_OBELISK,
+    MAGIC_CARPET,
     NPC
 }
