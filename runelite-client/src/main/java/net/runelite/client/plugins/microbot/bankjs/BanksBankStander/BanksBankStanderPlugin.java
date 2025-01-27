@@ -62,7 +62,7 @@ public class BanksBankStanderPlugin extends Plugin {
                         BanksBankStanderScript.itemsProcessed++;
                     }
                 } else {
-                    if (Rs2Inventory.count(BanksBankStanderScript.firstItemIdentifier) < config.firstItemQuantity()) {
+                    if (Rs2Inventory.count(config.firstItemIdentifier()) < config.firstItemQuantity()) {
                         if (BanksBankStanderScript.firstItemSum > 0) { BanksBankStanderScript.firstItemSum--; }
                         BanksBankStanderScript.itemsProcessed++;
                     }
@@ -73,7 +73,7 @@ public class BanksBankStanderPlugin extends Plugin {
                             if (BanksBankStanderScript.secondItemSum > 0) { BanksBankStanderScript.secondItemSum--; }
                         }
                     } else {
-                        if (Rs2Inventory.count(BanksBankStanderScript.secondItemIdentifier) < config.secondItemQuantity()) {
+                        if (Rs2Inventory.count(config.secondItemIdentifier()) < config.secondItemQuantity()) {
                             if (BanksBankStanderScript.secondItemSum > 0) { BanksBankStanderScript.secondItemSum--; }
                         }
                     }
@@ -84,7 +84,7 @@ public class BanksBankStanderPlugin extends Plugin {
                             if (BanksBankStanderScript.thirdItemSum > 0) { BanksBankStanderScript.thirdItemSum--; }
                         }
                     } else {
-                        if (Rs2Inventory.count(BanksBankStanderScript.thirdItemIdentifier) < config.thirdItemQuantity()) {
+                        if (Rs2Inventory.count(config.thirdItemIdentifier()) < config.thirdItemQuantity()) {
                             if (BanksBankStanderScript.thirdItemSum > 0) { BanksBankStanderScript.thirdItemSum--; }
                         }
                     }
@@ -95,7 +95,7 @@ public class BanksBankStanderPlugin extends Plugin {
                             if (BanksBankStanderScript.fourthItemSum > 0) { BanksBankStanderScript.fourthItemSum--; }
                         }
                     } else {
-                        if (Rs2Inventory.count(BanksBankStanderScript.fourthItemIdentifier) < config.fourthItemQuantity()) {
+                        if (Rs2Inventory.count(config.fourthItemIdentifier()) < config.fourthItemQuantity()) {
                             if (BanksBankStanderScript.fourthItemSum > 0) { BanksBankStanderScript.fourthItemSum--; }
                         }
                     }
@@ -111,7 +111,7 @@ public class BanksBankStanderPlugin extends Plugin {
                     BanksBankStanderScript.previousItemChange = (System.currentTimeMillis() - 2500);
                 }
             } else { // Use secondItemIdentifier if secondItemId is null
-                Rs2Item item = Rs2Inventory.get(BanksBankStanderScript.secondItemIdentifier);
+                Rs2Item item = Rs2Inventory.get(config.secondItemIdentifier());
                 if (item != null) {
                     // average is 1800, max is 2400~
                     BanksBankStanderScript.previousItemChange = System.currentTimeMillis();
@@ -129,12 +129,6 @@ public class BanksBankStanderPlugin extends Plugin {
             if(BanksBankStanderScript.isWaitingForPrompt) {
                 BanksBankStanderScript.isWaitingForPrompt = false;
             }
-        }
-    }
-    @Subscribe
-    public void onGameStateChanged(GameStateChanged gameStateChanged) {
-        if (gameStateChanged.getGameState() == GameState.HOPPING || gameStateChanged.getGameState() == GameState.LOGIN_SCREEN || gameStateChanged.getGameState() == GameState.CONNECTION_LOST) {
-            BanksBankStanderScript.setConfirmedPIN(false);
         }
     }
     //*/ Added by Storm

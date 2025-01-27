@@ -112,6 +112,17 @@ public final class Varbits
 	public static final int CHAT_SCROLLBAR_ON_LEFT = 6374;
 
 	/**
+	 * Essence pouches
+	 */
+	public static final int ESSENCE_POUCH_SMALL_AMOUNT = 603;
+	public static final int ESSENCE_POUCH_MEDIUM_AMOUNT = 604;
+	public static final int ESSENCE_POUCH_LARGE_AMOUNT = 605;
+	public static final int ESSENCE_POUCH_GIANT_AMOUNT = 606;
+	public static final int ESSENCE_POUCH_COLOSSAL_AMOUNT = 13682;
+
+	public static final int ESSENCE_POUCH_COLOSSAL_DEGRADE = 13683;
+
+	/**
 	 * Runepouch
 	 */
 	public static final int RUNE_POUCH_RUNE1 = 29;
@@ -389,8 +400,6 @@ public final class Varbits
 	 */
 	public static final int IN_RAID = 5432;
 	public static final int TOTAL_POINTS = 5431;
-	public static final int PERSONAL_POINTS = 5422;
-	public static final int RAID_PARTY_SIZE = 5424;
 
 	// 0 = raid not started, >0 = raid started
 	public static final int RAID_STATE = 5425;

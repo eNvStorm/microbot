@@ -28,7 +28,7 @@
 
 	<groupId>net.runelite</groupId>
 	<artifactId>runelite-parent</artifactId>
-	<version>1.10.46-SNAPSHOT</version>
+	<version>1.10.48-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>RuneLite</name>
@@ -47,7 +47,7 @@
 		<checkstyle.skip>true</checkstyle.skip>
 		<glslang.path></glslang.path>
 
-		<rs.version>227</rs.version>
+		<rs.version>228</rs.version>
 	</properties>
 
 	<licenses>
@@ -137,9 +137,9 @@
 		<module>runelite-client</module>
 		<module>runelite-jshell</module>
 		<module>runelite-maven-plugin</module>
-		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/useonobject</module>
+		<!--<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/useonobject</module>
 		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/blastifurnace</module>
-		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/PlayerAlarm</module>
+		<module>runelite-client/src/main/java/net/runelite/client/plugins/microbot/storm/plugins/PlayerAlarm</module>-->
 	</modules>
 
 	<dependencyManagement>

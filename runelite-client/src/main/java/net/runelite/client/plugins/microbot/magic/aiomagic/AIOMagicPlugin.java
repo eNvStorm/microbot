@@ -12,11 +12,10 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.microbot.Microbot;
-import net.runelite.client.plugins.microbot.magic.aiomagic.enums.MagicActivity;
+import net.runelite.client.plugins.microbot.magic.aiomagic.enums.StunSpell;
 import net.runelite.client.plugins.microbot.magic.aiomagic.enums.SuperHeatItem;
-import net.runelite.client.plugins.microbot.magic.aiomagic.scripts.AlchScript;
-import net.runelite.client.plugins.microbot.magic.aiomagic.scripts.SplashScript;
-import net.runelite.client.plugins.microbot.magic.aiomagic.scripts.SuperHeatScript;
+import net.runelite.client.plugins.microbot.magic.aiomagic.enums.TeleportSpell;
+import net.runelite.client.plugins.microbot.magic.aiomagic.scripts.*;
 import net.runelite.client.plugins.microbot.util.magic.Rs2CombatSpells;
 import net.runelite.client.ui.overlay.OverlayManager;
 
@@ -24,8 +23,8 @@ import javax.inject.Inject;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.stream.Collectors;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @PluginDescriptor(
 		name = PluginDescriptor.GMason + "AIO Magic",
@@ -53,8 +52,14 @@ public class AIOMagicPlugin extends Plugin {
 	private AlchScript alchScript;
 	@Inject
 	private SuperHeatScript superHeatScript;
+	@Inject
+	private TeleportScript teleportScript;
+	@Inject
+	private TeleAlchScript teleAlchScript;
+	@Inject
+	private StunAlchScript stunAlchScript;
 
-	public static String version = "1.0.0";
+	public static String version = "1.1.0";
 	
 	@Getter
 	private Rs2CombatSpells combatSpell;
@@ -64,13 +69,22 @@ public class AIOMagicPlugin extends Plugin {
 	private SuperHeatItem superHeatItem;
 	@Getter
 	private String npcName;
-	
+	@Getter
+	private TeleportSpell teleportSpell;
+	@Getter
+	private StunSpell stunSpell;
+	@Getter
+	private String stunNpcName;
+
 	@Override
 	protected void startUp() throws AWTException {
 		combatSpell = config.combatSpell();
 		alchItemNames = updateItemList(config.alchItems());
 		superHeatItem = config.superHeatItem();
 		npcName = config.npcName();
+		teleportSpell = config.teleportSpell();
+		stunSpell = config.stunSpell();
+		stunNpcName = config.stunNpcName();
 
 		if (overlayManager != null) {
 			overlayManager.add(aioMagicOverlay);
@@ -86,6 +100,15 @@ public class AIOMagicPlugin extends Plugin {
 			case SUPERHEAT:
 				superHeatScript.run();
 				break;
+			case TELEPORT:
+				teleportScript.run();
+				break;
+			case TELEALCH:
+				teleAlchScript.run();
+				break;
+			case STUNALCH:
+				stunAlchScript.run();
+				break;
 		}
 	}
 
@@ -93,9 +116,13 @@ public class AIOMagicPlugin extends Plugin {
 		splashScript.shutdown();
 		alchScript.shutdown();
 		superHeatScript.shutdown();
+		teleportScript.shutdown();
+		teleAlchScript.shutdown();
+		stunAlchScript.shutdown();
 		overlayManager.remove(aioMagicOverlay);
 	}
 
+	@Subscribe
 	public void onConfigChanged(ConfigChanged event) {
 		if (!event.getGroup().equals(AIOMagicConfig.configGroup)) return;
 		
@@ -113,6 +140,18 @@ public class AIOMagicPlugin extends Plugin {
 		
 		if (event.getKey().equals(AIOMagicConfig.npcName)) {
 			npcName = config.npcName();
+		}
+
+		if (event.getKey().equals(AIOMagicConfig.teleportSpell)) {
+			teleportSpell = config.teleportSpell();
+		}
+
+		if (event.getKey().equals(AIOMagicConfig.stunSpell)) {
+			stunSpell = config.stunSpell();
+		}
+
+		if (event.getKey().equals(AIOMagicConfig.stunNpcName)) {
+			stunNpcName = config.stunNpcName();
 		}
 	}
 	

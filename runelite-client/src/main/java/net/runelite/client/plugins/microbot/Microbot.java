@@ -3,6 +3,7 @@ package net.runelite.client.plugins.microbot;
 import com.google.inject.Injector;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import net.runelite.api.Point;
 import net.runelite.api.*;
 import net.runelite.api.events.ItemContainerChanged;
@@ -20,6 +21,7 @@ import net.runelite.client.game.NPCManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.game.WorldService;
 import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginInstantiationException;
 import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.plugins.loottracker.LootTrackerRecord;
@@ -48,8 +50,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -271,6 +273,13 @@ public class Microbot {
         return null;
     }
 
+    /**
+     * Starts the specified plugin by enabling it and starting all plugins in the plugin manager.
+     * This method checks if the provided plugin is non-null before proceeding.
+     *
+     * @param plugin the plugin to be started.
+     */
+    @SneakyThrows
     public static void startPlugin(Plugin plugin) {
         if (plugin == null) return;
         Microbot.getPluginManager().setPluginEnabled(plugin, true);
@@ -280,7 +289,6 @@ public class Microbot {
     }
 
     public static void doInvoke(NewMenuEntry entry, Rectangle rectangle) {
-
         try {
             if (Rs2UiHelper.isRectangleWithinCanvas(rectangle)) {
                 click(rectangle, entry);
@@ -429,7 +437,7 @@ public class Microbot {
      * This method filters the active plugins managed by the `pluginManager` to include only those whose
      * package name contains "microbot" (case-insensitive). It further excludes certain plugins based on
      * their class names, such as "QuestHelperPlugin", "MInventorySetupsPlugin", "MicrobotPlugin",
-     * "MicrobotConfigPlugin", "ShortestPathPlugin", "AntibanPlugin", and "zLooterPlugin".
+     * "MicrobotConfigPlugin", "ShortestPathPlugin", "AntibanPlugin", and "ExamplePlugin".
      *
      * @return a list of active plugins belonging to the "microbot" package, excluding the specified plugins.
      */
@@ -442,7 +450,7 @@ public class Microbot {
                          && !x.getClass().getSimpleName().equalsIgnoreCase("MicrobotConfigPlugin")
                          && !x.getClass().getSimpleName().equalsIgnoreCase("ShortestPathPlugin")
                          && !x.getClass().getSimpleName().equalsIgnoreCase("AntibanPlugin")
-                         && !x.getClass().getSimpleName().equalsIgnoreCase("zLooterPlugin"))
+                         && !x.getClass().getSimpleName().equalsIgnoreCase("ExamplePlugin"))
                  .collect(Collectors.toList());
      }
 

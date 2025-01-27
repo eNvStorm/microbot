@@ -27,9 +27,7 @@ public class Rs2UiHelper {
         int canvasHeight = Microbot.getClient().getCanvasHeight();
         int canvasWidth = Microbot.getClient().getCanvasWidth();
 
-        return rectangle.getX() >= 0.0 &&
-                rectangle.getY() >= 0.0 &&
-                rectangle.getX() + rectangle.getWidth() <= (double) canvasWidth &&
+        return rectangle.getX() + rectangle.getWidth() <= (double) canvasWidth &&
                 rectangle.getY() + rectangle.getHeight() <= (double) canvasHeight;
     }
 
@@ -48,9 +46,9 @@ public class Rs2UiHelper {
         if (Rs2AntibanSettings.naturalMouse) {
             java.awt.Point mousePos = Microbot.getMouse().getMousePosition();
             if (isMouseWithinRectangle(rectangle)) return new Point(mousePos.x, mousePos.y);
-            else return Rs2Random.randomPointEx(new Point(mousePos.x, mousePos.y), rectangle, 0.5);
+            else return Rs2Random.randomPointEx(new Point(mousePos.x, mousePos.y), rectangle, 0.78);
         } else
-            return Rs2Random.randomPointEx(Microbot.getMouse().getLastClick(), rectangle, 0.5);
+            return Rs2Random.randomPointEx(Microbot.getMouse().getLastClick(), rectangle, 0.78);
     }
 
     //check if mouse is already within the rectangle

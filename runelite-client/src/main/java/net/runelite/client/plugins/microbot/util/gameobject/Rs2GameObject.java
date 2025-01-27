@@ -282,6 +282,25 @@ public class Rs2GameObject {
         return null;
     }
 
+    /**
+     * find ground object by location
+     * @param worldPoint
+     * @return groundobject
+     */
+    public static TileObject findGroundObjectByLocation(WorldPoint worldPoint) {
+
+        List<GroundObject> groundObjects = getGroundObjects();
+
+        if (groundObjects == null) return null;
+
+        for (net.runelite.api.GroundObject groundObject : groundObjects) {
+            if (groundObject.getWorldLocation().equals(worldPoint))
+                return groundObject;
+        }
+
+        return null;
+    }
+
     public static TileObject findObjectByIdAndDistance(int id, int distance) {
 
         List<GameObject> gameObjects = getGameObjectsWithinDistance(distance);
@@ -755,6 +774,9 @@ public static GameObject findReachableObject(String objectName, boolean exact, i
             //exceptions if the pathsize needs to be bigger
             if (object.getId() == ObjectID.MARKET_STALL_14936) {
                 if (object instanceof GameObject && !Rs2Walker.canReach(object.getWorldLocation(), ((GameObject) object).sizeX(), ((GameObject) object).sizeY(), 4, 4))
+                    continue;
+            } else if (object.getId() == ObjectID.BEAM_42220) {
+                if (object.getWorldLocation().distanceTo(Rs2Player.getWorldLocation()) > 6)
                     continue;
             } else {
                 if (object instanceof GameObject && !Rs2Walker.canReach(object.getWorldLocation(), ((GameObject) object).sizeX(), ((GameObject) object).sizeY()))

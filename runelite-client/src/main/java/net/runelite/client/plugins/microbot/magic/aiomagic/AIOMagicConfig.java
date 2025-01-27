@@ -5,7 +5,9 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.plugins.microbot.magic.aiomagic.enums.MagicActivity;
+import net.runelite.client.plugins.microbot.magic.aiomagic.enums.StunSpell;
 import net.runelite.client.plugins.microbot.magic.aiomagic.enums.SuperHeatItem;
+import net.runelite.client.plugins.microbot.magic.aiomagic.enums.TeleportSpell;
 import net.runelite.client.plugins.microbot.util.magic.Rs2CombatSpells;
 
 @ConfigGroup(AIOMagicConfig.configGroup)
@@ -16,6 +18,10 @@ public interface AIOMagicConfig extends Config {
 	String alchItems = "alchItems";
 	String superHeatItem = "superHeatItem";
 	String npcName = "npcName";
+	String staff = "staff";
+	String teleportSpell = "teleportSpell";
+	String stunSpell = "stunSpell";
+	String stunNpcName = "stunNpcName";
 
 	@ConfigSection(
 			name = "General Settings",
@@ -26,10 +32,17 @@ public interface AIOMagicConfig extends Config {
 
 	@ConfigSection(
 			name = "Splashing Settings",
-			description = "Configure splashing settings",
+			description = "Configure Stun settings",
 			position = 1
 	)
 	String splashSection = "splash";
+
+	@ConfigSection(
+			name = "Stun Settings",
+			description = "Configure splashing settings",
+			position = 1
+	)
+	String stunSection = "stun";
 
 	@ConfigSection(
 			name = "Alch Settings",
@@ -45,6 +58,13 @@ public interface AIOMagicConfig extends Config {
 	)
 	String superHeatSection = "superHeat";
 
+	@ConfigSection(
+			name = "Teleport Settings",
+			description = "Configure teleport settings",
+			position = 3
+	)
+	String teleportSection = "teleport";
+
 	@ConfigItem(
 			keyName = activity,
 			name = "Activity",
@@ -54,6 +74,27 @@ public interface AIOMagicConfig extends Config {
 	)
 	default MagicActivity magicActivity() {
 		return MagicActivity.SPLASHING;
+	}
+
+	@ConfigItem(
+			keyName = stunNpcName,
+			name = "Stun npc name",
+			description = "Name of the npc to stun",
+			position = 0,
+			section = stunSection
+	)
+	default String stunNpcName() {
+		return "";
+	}
+	@ConfigItem(
+			keyName = stunSpell,
+			name = "Stun spell",
+			description = "Name of the stun spell",
+			position = 1,
+			section = stunSection
+	)
+	default StunSpell stunSpell() {
+		return StunSpell.STUN;
 	}
 
 	@ConfigItem(
@@ -98,5 +139,16 @@ public interface AIOMagicConfig extends Config {
 	)
 	default SuperHeatItem superHeatItem() {
 		return SuperHeatItem.IRON;
+	}
+
+	@ConfigItem(
+			keyName = teleportSpell,
+			name = "Teleport Spell",
+			description = "Select the teleport spell you would like to use",
+			position = 0,
+			section = teleportSection
+	)
+	default TeleportSpell teleportSpell() {
+		return TeleportSpell.VARROCK_TELEPORT;
 	}
 }

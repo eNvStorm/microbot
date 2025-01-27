@@ -6,8 +6,19 @@ import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.plugins.microbot.util.antiban.enums.PlaySchedule;
 
-@ConfigGroup("Breakhandler")
+@ConfigGroup(BreakHandlerConfig.configGroup)
 public interface BreakHandlerConfig extends Config {
+    String configGroup = "break-handler";
+    String hideOverlay = "hideOverlay";
+
+    @ConfigItem(
+            keyName = "hideOverlay",
+            name = "Overlay Hider",
+            description = "Select this if you want to hide overlay"
+    )
+    default boolean isHideOverlay() {
+        return false;
+    }
 
     // Play Schedule section
     @ConfigSection(
@@ -18,8 +29,8 @@ public interface BreakHandlerConfig extends Config {
     String usePlaySchedule = "usePlaySchedule";
 
     @ConfigItem(
-            keyName = "TimeUntilBreakStart",
-            name = "Time until break start",
+            keyName = "Min Playtime",
+            name = "Min Playtime",
             description = "Time until break start in minutes",
             position = 0
     )
@@ -28,8 +39,8 @@ public interface BreakHandlerConfig extends Config {
     }
 
     @ConfigItem(
-            keyName = "TimeUntilBreakEnd",
-            name = "Time until break end",
+            keyName = "Max Playtime",
+            name = "Max Playtime",
             description = "Time until break ends in minutes",
             position = 1
     )
@@ -38,8 +49,8 @@ public interface BreakHandlerConfig extends Config {
     }
 
     @ConfigItem(
-            keyName = "BreakDurationStart",
-            name = "Break duration start",
+            keyName = "Min BreakTime",
+            name = "Min BreakTime",
             description = "Break duration start in minutes",
             position = 2
     )
@@ -48,8 +59,8 @@ public interface BreakHandlerConfig extends Config {
     }
 
     @ConfigItem(
-            keyName = "BreakDurationEnd",
-            name = "Break duration end",
+            keyName = "Max BreakTime",
+            name = "Max BreakTime",
             description = "Break duration end in minutes",
             position = 3
     )
