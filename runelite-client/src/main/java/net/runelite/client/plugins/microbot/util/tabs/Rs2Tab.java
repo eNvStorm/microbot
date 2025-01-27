@@ -173,7 +173,59 @@ public class Rs2Tab {
 
         return getCurrentTab() == InterfaceTab.LOGOUT;
     }
-
+    public static boolean switchToTab(InterfaceTab interfaceTab){
+        if (getCurrentTab() == interfaceTab) {
+            return true;
+        }
+        switch (interfaceTab) {
+            case COMBAT:
+                switchToCombatOptionsTab();
+                break;
+            case SKILLS:
+                switchToSkillsTab();
+                break;
+            case QUESTS:
+                switchToQuestTab();
+                break;
+            case INVENTORY:
+                switchToInventoryTab();
+                break;
+            case EQUIPMENT:
+                switchToEquipmentTab();
+                break;
+            case PRAYER:
+                switchToPrayerTab();
+                break;
+            case MAGIC:
+                switchToMagicTab();
+                break;
+            case CHAT:
+                switchToGroupingTab();
+                break;
+            case FRIENDS:
+                switchToFriendsTab();
+                break;
+            case ACC_MAN:
+                switchToAccountManagementTab();
+                break;
+            case LOGOUT:
+                switchToLogout();
+                break;
+            case SETTINGS:
+                switchToSettingsTab();
+                break;
+            case EMOTES:
+                switchToEmotesTab();
+                break;
+            case MUSIC:
+                switchToMusicTab();
+                break;
+            // Add other cases for additional tabs
+            default:
+                return false; // Unsupported tab
+        }
+        return getCurrentTab() == interfaceTab;
+    }
     private static int getLogoutWidgetId() {
         /* Widget Ids - These may change during Runelite updates */
         final int FIXED_CLASSIC_DISPLAY__FIXED_VIEWPORT_OPTIONS_TAB = 35913778;
